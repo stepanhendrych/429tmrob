@@ -1,0 +1,21 @@
+#!/usr/bin/env node
+
+const { execSync } = require("child_process");
+const fs = require("fs"); // Přidán modul pro práci se soubory
+
+console.log("--- Šifruji .env před pushem ---");
+try {
+  // Spustíme šifrování
+  execSync("npx dotenvx encrypt -f .env", { stdio: "inherit" });
+
+  if (fs.existsSync(".env.vault")) {
+    execSync("git add .env.vault", { stdio: "inherit" });
+  } else {
+    console.log(
+      "Požadovaný .env.vault nebyl nalezen (možná nedošlo k žádné změně).",
+    );
+  }
+} catch (e) {
+  console.error("Šifrování selhalo!");
+  process.exit(1);
+}

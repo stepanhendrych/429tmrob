@@ -14,5 +14,6 @@
   "terminal.integrated.env.linux": { "PYTHONPATH": "${workspaceFolder}" },
   "json.schemaDownload.trustedDomains": {
     "https://biomejs.dev/schemas": true
-  }
+  },
+  "python.terminal.useEnvFile": true
 }
