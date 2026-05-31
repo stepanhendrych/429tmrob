@@ -1,0 +1,29 @@
+services:
+
+  # Backend: FastAPI
+  backend:
+    build: ./backend
+    env_file: .env
+    restart: always
+    ports:
+      - "8000:8000"
+
+  # Frontend: React
+  frontend:
+    build: ./frontend
+    restart: always
+    ports:
+      - "3000:3000"
+
+  # Reverse Proxy: Caddy
+  caddy:
+    image: caddy:latest
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+    depends_on:
+      - backend
+      - frontend

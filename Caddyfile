@@ -1,0 +1,9 @@
+# Pokud to budeš chtít otevírat v prohlížeči jako http://localhost
+localhost {
+    # 1. API volání pošli na backend
+    # Píše se pro docker prostředí
+    reverse_proxy /api/* backend:8000
+
+    # 2. Všechno ostatní -> frontend
+    reverse_proxy frontend:3000
+}

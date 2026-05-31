@@ -1,0 +1,41 @@
+# Konfigurace a environment
+*.log
+.env
+dist/
+build/
+.vscode/mcp.json
+
+# Python
+*.py[cod]
+*.pyo
+*.pyd
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+pip-wheel-metadata/
+*.egg-info/
+.eggs/
+.cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDEs
+.idea/
+*.iml
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Misc
+*.pem
+*.env.*
+!.env

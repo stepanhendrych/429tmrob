@@ -1,0 +1,44 @@
+{
+  // See https://go.microsoft.com/fwlink/?LinkId=827846 to learn about workspace recommendations.
+  // Extension identifier format: ${publisher}.${name}. Example: vscode.csharp
+
+  // List of extensions which should be recommended for users of this workspace.
+  "recommendations": [
+    "ms-python.black-formatter",
+    "esbenp.prettier-vscode",
+    "continue.continue",
+    "matthewpi.caddyfile-support",
+    "pranaygp.vscode-css-peek",
+    "repreng.csv",
+    "usernamehw.errorlens",
+    "dbaeumer.vscode-eslint",
+    "msjsdiag.vscode-react-native",
+    "bradlc.vscode-tailwindcss",
+    "github.vscode-pull-request-github",
+    "ecmel.vscode-html-css",
+    "ms-toolsai.jupyter",
+    "ms-toolsai.vscode-jupyter-cell-tags",
+    "ms-toolsai.jupyter-keymap",
+    "ms-toolsai.jupyter-renderers",
+    "ms-toolsai.jupyter-slideshow",
+    "ms-vscode.live-preview",
+    "yzhang.markdown-all-in-one",
+    "jonathan-yeung.mark-sharp",
+    "shd101wyy.markdown-preview-enhanced",
+    "pkief.material-icon-theme",
+    "christian-kohler.path-intellisense",
+    "ms-python.vscode-pylance",
+    "the0807.vscode-uv",
+    "ms-python.python",
+    "ms-python.debugpy",
+    "ms-python.vscode-python-envs",
+    "ms-vscode-remote.remote-ssh",
+    "ms-vscode-remote.remote-ssh-edit",
+    "tomoki1207.pdf",
+    "dotjoshjohnson.xml"
+  ],
+  // List of extensions recommended by VS Code that should not be recommended for users of this workspace.
+  "unwantedRecommendations": [
+    "ms-vscode.vscode-chat-customizations-evaluations"
+  ]
+}

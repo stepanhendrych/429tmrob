@@ -1,0 +1,16 @@
+{
+  "name": "aiolympiada-workplace",
+  "version": "1.0.0",
+  "description": "*tady bude text*",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@dotenvx/dotenvx": "^1.70.0"
+  }
+}

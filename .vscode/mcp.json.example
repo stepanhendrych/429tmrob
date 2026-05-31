@@ -1,0 +1,11 @@
+{
+  "servers": {
+    "AFFiNE-429tmrob-hackaton": {
+      "type": "sse",
+      "url": "url_to_mcp_endpoint",
+      "headers": {
+        "Authorization": "auth_token"
+      }
+    }
+  }
+}

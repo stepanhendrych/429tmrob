@@ -1,0 +1,45 @@
+target-version = "py314"
+line-length = 90
+exclude = [
+  ".git",
+  ".venv",
+  "venv",
+  "__pycache__",
+  "build",
+  "dist",
+]
+
+[lint]
+select = [
+  "F",    # Pyflakes
+  "E",    # pycodestyle errors
+  "W",    # pycodestyle warnings
+  "I",    # isort
+  "UP",   # pyupgrade
+  "B",    # flake8-bugbear
+  "C4",   # flake8-comprehensions
+  "PIE",  # flake8-pie
+  "SIM",  # flake8-simplify
+  "PD",   # pandas-vet
+  "S",    # flake8-security
+  "RUF",  # Ruff-specific
+]
+ignore = [
+  "B008",    # Povolit Depends() volání ve FastAPI
+]
+
+[lint.per-file-ignores]
+"*.ipynb" = ["F", "E", "W", "I", "UP", "B", "C4", "PIE", "SIM", "PD", "S", "RUF"]  # Absolutní svoboda v Jupyter noteboocích
+"tests/*" = ["S101"]
+
+[lint.isort]
+combine-as-imports = true
+lines-after-imports = 2
+known-first-party = ["app"]
+force-single-line = false # false odpovídá Google style importům (více importů z jednoho balíku na řádek)
+
+[format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
