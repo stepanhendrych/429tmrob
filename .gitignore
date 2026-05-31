@@ -1,1 +1,63 @@
-429tmrob
+# Ignore nested repository and workspace-specific configuration
+429tmrob/
+.vscode/
+.idea/
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+*.pyc
+.python-version
+
+# Virtual environments
+.env
+.venv/
+env/
+venv/
+ENV/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# Logs and local files
+*.log
+*.sqlite3
+*.db
+*.db-journal
+
+# macOS
+.DS_Store
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+pnpm-lock.yaml
+
+# Coverage
+htmlcov/
+.coverage
+.coverage.*
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+
+# Editor temporary files
+*.swp
+*.swo
+*.tmp
+*.temp
+*.bak
+*~
