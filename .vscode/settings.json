@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^cd /home/kersonik/ai && python - <<'PY'\nwith open\\('README\\.md','rb'\\) as f:\n    data=f\\.read\\(\\)\nprint\\(repr\\(data\\)\\)\nPY$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}
