@@ -74,7 +74,7 @@ export function KrajPage() {
           <p className="text-sm text-muted-foreground mt-1">
             {hospitals.length} radiologických pracovišť v Moravskoslezském kraji
           </p>
-          <div className="mt-3 flex items-center gap-4 text-xs sm:text-sm text-muted-foreground justify-center border rounded-lg p-3 bg-background/50">
+          <div className="mt-3 flex items-center gap-4 text-sm text-muted-foreground justify-center border border-muted-foreground/20 rounded-lg p-3 bg-background/50">
             <span className="flex items-center gap-1">
               <Zap className="h-3.5 w-3.5 text-emerald-500" />
               <Badge variant="default" className="text-[10px] bg-emerald-600">
