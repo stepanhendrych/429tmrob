@@ -121,7 +121,7 @@ export function ScanReview({ scan, onBack, onSubmit, hospitalId }: Props) {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
-    setFractureMarkers((prev) => [...prev, { x, y }]);
+    setFractureMarkers([{ x, y }]);
   };
 
   const handleSubmit = async () => {
@@ -342,21 +342,16 @@ export function ScanReview({ scan, onBack, onSubmit, hospitalId }: Props) {
             </div>
             <div className="flex items-center justify-between px-3 py-1.5 bg-black/80 border-t border-white/10">
               <p className="text-xs text-white/60">
-                Kliknutím označte oblast nálezu
+                {fractureMarkers.length > 0 ? "Kliknutím změníte označení" : "Kliknutím označte místo nálezu"}
               </p>
               <div className="flex items-center gap-2">
                 {fractureMarkers.length > 0 && (
-                  <>
-                    <span className="text-xs text-white/60">
-                      {fractureMarkers.length} značek
-                    </span>
-                    <button
-                      onClick={() => setFractureMarkers([])}
-                      className="text-[10px] text-red-400 hover:text-red-300 underline"
-                    >
-                      Smazat
-                    </button>
-                  </>
+                  <button
+                    onClick={() => setFractureMarkers([])}
+                    className="text-[10px] text-red-400 hover:text-red-300 underline"
+                  >
+                    Smazat
+                  </button>
                 )}
                 <span className="text-xs text-white/40">
                   {scan.scanId} · {scan.patientId}
