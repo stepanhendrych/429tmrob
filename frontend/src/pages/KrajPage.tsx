@@ -74,6 +74,20 @@ export function KrajPage() {
           <p className="text-sm text-muted-foreground mt-1">
             {hospitals.length} radiologických pracovišť v Moravskoslezském kraji
           </p>
+          <div className="mt-3 w-fit mx-auto flex items-center gap-4 text-base text-muted-foreground border border-muted-foreground/20 rounded-lg p-3 bg-background/50">
+            <span className="flex items-center gap-1">
+              <Zap className="h-3.5 w-3.5 text-emerald-500" />
+              <Badge variant="default" className="text-[10px] bg-emerald-600">
+                AI
+              </Badge>{" "}
+              = ostré vyhodnocení (po nasazení backendu)
+            </span>
+            <span className="text-muted-foreground/50">|</span>
+            <span className="flex items-center gap-1">
+              <Building2 className="h-3.5 w-3.5" />
+              Ostatní = statická demonstrativní data
+            </span>
+          </div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 mb-10">
@@ -150,22 +164,6 @@ export function KrajPage() {
         </div>
       </main>
 
-      <div className="mx-auto max-w-5xl px-6 pb-4">
-        <div className="flex items-center gap-4 text-xs text-muted-foreground justify-center border rounded-lg p-3 bg-background/50">
-          <span className="flex items-center gap-1">
-            <Zap className="h-3 w-3 text-emerald-500" />
-            <Badge variant="default" className="text-[10px] bg-emerald-600">
-              AI
-            </Badge>{" "}
-            = ostré vyhodnocení (po nasazení backendu)
-          </span>
-          <span className="text-muted-foreground/50">|</span>
-          <span className="flex items-center gap-1">
-            <Building2 className="h-3 w-3" />
-            Ostatní = statická demonstrativní data
-          </span>
-        </div>
-      </div>
       <footer className="border-t py-4 text-center text-xs text-muted-foreground">
         Česká AI Olympiáda 2026 · AI Startup · nvias, z.s.
       </footer>
