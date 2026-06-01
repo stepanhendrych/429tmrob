@@ -3,8 +3,12 @@ name = "429tmrob"
 version = "0.1.0"
 description = "Why participate if you are not going to win."
 readme = "README.md"
-requires-python = ">=3.14"
-dependencies = []
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.115.0,<1",
+    "uvicorn[standard]>=0.34.0,<1",
+    "pydantic>=2.10.0,<3",
+]
 
 [dependency-groups]
 dev = [

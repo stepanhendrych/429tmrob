@@ -326,7 +326,7 @@ AI neříká: "Je to zápal."
 Všechny snímky projdou rukama lékaře (Human-in-the-loop).
 
 ### CORS
-Povol `*` nebo origin `http://localhost:5173`.
+Povol `*` nebo origin `http://localhost:3000`.
 
 ### Formát
 - Všechna data vracej JSON.
