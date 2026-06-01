@@ -223,13 +223,12 @@ export async function submitReview(
   scanId: string,
   decision: "healthy" | "different" | "agreed",
   doctorNote?: string,
-  fractureMarkers?: { x: number; y: number }[],
 ): Promise<{ success: boolean }> {
   if (isOpava(hospitalId)) {
     return apiFetch(`/hospitals/${hospitalId}/review`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ scanId, decision, doctorNote, fractureMarkers }),
+      body: JSON.stringify({ scanId, decision, doctorNote }),
     });
   }
   return { success: true };

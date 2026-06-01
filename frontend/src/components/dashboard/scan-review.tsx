@@ -299,39 +299,17 @@ export function ScanReview({ scan, onBack, onSubmit, hospitalId }: Props) {
 
           {/* Demo X-ray image */}
           <div className="rounded-lg overflow-hidden border bg-black">
-            <div className="relative">
-              <img
-                src={
-                  scan.imageUrl ||
-                  `/images/xray-${(parseInt(scan.scanId.replace(/\D/g, ""), 10) % 2) + 1}.webp`
-                }
-                alt={`RTG snímek ${scan.scanId}`}
-                className="w-full h-auto max-h-[400px] object-contain mx-auto"
-                draggable={false}
-              />
-              {scan.markerPosition && (
-                <div
-                  className="absolute pointer-events-none"
-                  style={{
-                    left: `${scan.markerPosition.x}%`,
-                    top: `${scan.markerPosition.y}%`,
-                    transform: "translate(-50%, -50%)",
-                  }}
-                >
-                  <div className="relative w-8 h-8">
-                    <div className="absolute inset-0 rounded-full border-2 border-red-400 opacity-80 animate-pulse" />
-                    <div className="absolute top-1/2 left-0 w-full h-0.5 bg-red-400 -translate-y-1/2 opacity-80" />
-                    <div className="absolute left-1/2 top-0 h-full w-0.5 bg-red-400 -translate-x-1/2 opacity-80" />
-                  </div>
-                </div>
-              )}
-            </div>
+            <img
+              src={
+                scan.imageUrl ||
+                `/images/xray-${(parseInt(scan.scanId.replace(/\D/g, ""), 10) % 2) + 1}.webp`
+              }
+              alt={`RTG snímek ${scan.scanId}`}
+              className="w-full h-auto max-h-[400px] object-contain mx-auto"
+            />
             <div className="px-3 py-1.5 bg-black/80 border-t border-white/10">
               <p className="text-xs text-white/60 text-center">
-                {scan.markerPosition
-                  ? "AI označila podezřelou oblast — zkontrolujte prosím"
-                  : "AI nalezla v normě"}
-                {" · "}{scan.scanId} · {scan.patientId}
+                {scan.scanId} · {scan.patientId} · demo snímek
               </p>
             </div>
           </div>
