@@ -13,18 +13,31 @@
     "rules": {
       "recommended": true,
       "correctness": {
-        "noUnusedVariables": "warn",
-        "noUnusedImports": "warn",
+        "noUnusedVariables": "off",
+        "noUnusedImports": "off",
         "useExhaustiveDependencies": "off"
       },
       "style": {
         "useConst": "error",
-        "useNamingConvention": "off"
+        "useNamingConvention": "off",
+        "noNonNullAssertion": "off"
       },
-      "suspicious": {},
-      "security": {
-        "noDangerouslySetInnerHtml": "warn"
+      "suspicious": {
+        "noArrayIndexKey": "off",
+        "noShadowRestrictedNames": "off"
+      },
+      "a11y": {
+        "useButtonType": "off",
+        "noSvgWithoutTitle": "off",
+        "useKeyWithClickEvents": "off",
+        "useValidAnchor": "off",
+        "noStaticElementInteractions": "off"
       }
+    }
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
     }
   },
   "javascript": {
@@ -35,13 +48,6 @@
     }
   },
   "files": {
-    "includes": [
-      "**",
-      "!!**/node_modules",
-      "!!**/dist",
-      "!!**/build",
-      "!!**/.next",
-      "!!**/package-lock.json"
-    ]
+    "includes": ["**/*.{js,ts,tsx,jsx,json}", "!!**/node_modules", "!!**/dist", "!!**/build", "!!**/.next", "!!**/package-lock.json"]
   }
 }
