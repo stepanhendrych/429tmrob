@@ -12,6 +12,7 @@ interface HeaderProps {
 
 const roleConfig: Record<Role, { label: string; icon: typeof Stethoscope }> = {
   doctor: { label: "Lékař", icon: Stethoscope },
+  radiologist: { label: "Radiolog", icon: Stethoscope },
   it_admin: { label: "IT Administrátor", icon: Server },
   spravce: { label: "Správce kraje", icon: UserCog },
   reditel: { label: "Ředitel", icon: Crown },
