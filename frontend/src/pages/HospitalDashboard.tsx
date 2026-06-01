@@ -63,7 +63,9 @@ export function HospitalDashboard() {
           onLogout={handleLogout}
         />
         <main className="flex-1 overflow-y-auto p-6">
-          {user.role === "doctor" && <DoctorDashboard hospitalId={hospitalId} />}
+          {(user.role === "doctor" || user.role === "radiologist") && (
+            <DoctorDashboard hospitalId={hospitalId} />
+          )}
           {user.role === "spravce" && <SpravceDashboard />}
           {user.role === "it_admin" && <ItAdminDashboard />}
           {user.role === "reditel" && <DirectorDashboard />}

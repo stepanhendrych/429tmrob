@@ -11,7 +11,12 @@ from fastapi import Body, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
-from ultralytics import YOLO
+try:
+    from ultralytics import YOLO
+    _HAS_YOLO = True
+except ImportError:
+    YOLO = None  # type: ignore
+    _HAS_YOLO = False
 import uvicorn
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -58,7 +63,9 @@ def decode_base64_image(data: str) -> bytes:
     return base64.b64decode(data, validate=True)
 
 
-def load_ai_model() -> YOLO:
+def load_ai_model():
+    if not _HAS_YOLO:
+        raise RuntimeError("ultralytics neni nainstalovano")
     if not os.path.exists(MODEL_PATH):
         raise RuntimeError(f"AI model not found at {MODEL_PATH}")
     return YOLO(MODEL_PATH)
@@ -819,7 +826,11 @@ def startup_state() -> None:
     now = datetime.utcnow().replace(microsecond=0)
     used_images: set[str] = set()
     app.state.used_images = used_images
-    app.state.model = load_ai_model()
+    try:
+        app.state.model = load_ai_model()
+    except Exception as e:
+        print(f"⚠️ Model se nenasel, bezime bez nej: {e}")
+        app.state.model = None
     app.state.opava_queue = [
         build_queue_item(
             scan_id="X-5521",

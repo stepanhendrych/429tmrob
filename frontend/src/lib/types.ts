@@ -1,4 +1,4 @@
-export type Role = "doctor" | "it_admin" | "spravce" | "reditel";
+export type Role = "doctor" | "radiologist" | "it_admin" | "spravce" | "reditel";
 
 export interface Hospital {
   id: string;
