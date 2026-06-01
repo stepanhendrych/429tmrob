@@ -49,17 +49,17 @@ export function AuditLogPanel({ logs }: Props) {
               >
                 <Icon className={`h-4 w-4 mt-0.5 ${sev.color}`} />
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold">{l.userName}</span>
-                    <Badge variant={sev.badge} className="text-[10px]">
+                    <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold">{l.userName}</span>
+                    <Badge variant={sev.badge} className="text-xs">
                       {l.severity}
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">{l.action}</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5 font-mono">
+                  <p className="text-xs text-muted-foreground mt-0.5 break-all">
                     {l.target}
                   </p>
-                  <div className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground">
+                  <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
                     <Clock className="h-3 w-3" />
                     {l.timestamp}
                   </div>

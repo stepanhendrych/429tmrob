@@ -175,7 +175,7 @@ export interface ModelInstance {
 export interface LicenseInfo {
   id: string;
   hospitalName: string;
-  licenseType: "trial" | "full" | "expired";
+  licenseType: "trial" | "full" | "enterprise" | "expired";
   validUntil: string;
   maxScansPerDay: number;
   activeUsers: number;

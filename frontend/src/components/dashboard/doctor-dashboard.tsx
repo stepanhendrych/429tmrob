@@ -68,7 +68,7 @@ export function DoctorDashboard({ hospitalId }: Props) {
   }, [hospitalId, addToast]);
 
   const raw = location.pathname.split("/").pop() ?? "";
-  const views = ["queue", "classify", "metrics", "stats"] as const;
+  const views = ["queue", "stats"] as const;
   const view = views.includes(raw as (typeof views)[number]) ? raw : "queue";
 
   const activeQueue = data?.queue
@@ -116,7 +116,7 @@ export function DoctorDashboard({ hospitalId }: Props) {
         />
       ) : (
         <>
-          {(view === "queue" || view === "metrics") && (
+          {view === "queue" && (
             <>
               {/* Auto-start button when scans are available but not reviewing */}
               {activeQueue.length > 0 && !inReview && (
@@ -205,16 +205,7 @@ export function DoctorDashboard({ hospitalId }: Props) {
             </>
           )}
 
-          {view === "classify" && (
-            <div className="rounded-lg border p-8 text-center text-muted-foreground">
-              <p className="font-medium">Klasifikátor je součástí detailu snímku</p>
-              <p className="text-sm mt-1">
-                Systém automaticky předkládá snímky k vyhodnocení.
-              </p>
-            </div>
-          )}
-
-          {view === "metrics" && (
+          {view === "stats" && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <WeeklyChart stats={weeklyStats} />
               <div className="space-y-6">
@@ -225,17 +216,6 @@ export function DoctorDashboard({ hospitalId }: Props) {
                 />
                 <EthicsSummary />
               </div>
-            </div>
-          )}
-
-          {view === "stats" && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <WeeklyChart stats={weeklyStats} />
-              <UtilizationBar
-                percent={data.utilization}
-                dailyCapacity={data.hospital.dailyCapacity}
-                scansToday={data.scansToday}
-              />
             </div>
           )}
         </>

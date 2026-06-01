@@ -196,7 +196,7 @@ export function DirectorDashboard() {
                       fontSize={10}
                       fill="hsl(var(--muted-foreground))"
                     >
-                      {props.payload.name}
+                      {props.payload?.name}
                     </text>
                   )}
                 />

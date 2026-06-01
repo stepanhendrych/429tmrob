@@ -55,7 +55,7 @@ export const GOLDEN_HOSPITALS: Hospital[] = [
     lat: 49.939,
     lng: 17.902,
     rtgDevices: 3,
-    dailyCapacity: 180,
+    dailyCapacity: 820,
     utilization: 65,
   },
   {
@@ -159,6 +159,20 @@ export const GOLDEN_USERS: Record<string, User[]> = {
       name: "MUDr. Alena Krásná",
       email: "alena.krasna@nem-opava.cz",
       role: "doctor",
+      hospitalId: "nem-opava",
+    },
+    {
+      id: "u12",
+      name: "Ing. Tomáš Říha",
+      email: "tomas.riha@nem-opava.cz",
+      role: "it_admin",
+      hospitalId: "nem-opava",
+    },
+    {
+      id: "u13",
+      name: "MUDr. Helena Brožová, MBA",
+      email: "helena.brozova@nem-opava.cz",
+      role: "reditel",
       hospitalId: "nem-opava",
     },
   ],
@@ -560,23 +574,26 @@ export const GOLDEN_METRICS: ModelMetrics = {
 };
 
 export function GOLDEN_WEEKLY_STATS(hospitalId: string): WeeklyStat[] {
-  const stats: Record<string, WeeklyStat[]> = {
-    "fn-ostrava": [
-      { week: "19. týd", scans: 185, urgent: 42, avgProcessingTimeMin: 28 },
-      { week: "20. týd", scans: 172, urgent: 38, avgProcessingTimeMin: 24 },
-      { week: "21. týd", scans: 198, urgent: 45, avgProcessingTimeMin: 20 },
-      { week: "22. týd", scans: 190, urgent: 40, avgProcessingTimeMin: 16 },
-      { week: "23. týd", scans: 210, urgent: 48, avgProcessingTimeMin: 14 },
-    ],
-    "nem-karvina": [
-      { week: "19. týd", scans: 95, urgent: 22, avgProcessingTimeMin: 32 },
-      { week: "20. týd", scans: 88, urgent: 18, avgProcessingTimeMin: 28 },
-      { week: "21. týd", scans: 102, urgent: 25, avgProcessingTimeMin: 25 },
-      { week: "22. týd", scans: 97, urgent: 20, avgProcessingTimeMin: 22 },
-      { week: "23. týd", scans: 110, urgent: 28, avgProcessingTimeMin: 18 },
-    ],
-  };
-  return stats[hospitalId] ?? stats["fn-ostrava"]!;
+  const hospital = GOLDEN_HOSPITALS.find((h) => h.id === hospitalId);
+  const capacity = hospital?.dailyCapacity ?? 100;
+  const utilPct = (hospital?.utilization ?? 70) / 100;
+  const queue = GOLDEN_QUEUE(hospitalId);
+  const urgentRatio =
+    queue.length > 0 ? queue.filter((q) => q.isUrgent).length / queue.length : 0.2;
+
+  const weeks = ["19. týd", "20. týd", "21. týd", "22. týd", "23. týd"];
+  const factors = [0.9, 0.92, 0.98, 1.02, 1.05];
+
+  return weeks.map((week, i) => {
+    const scans = Math.round(capacity * 5 * utilPct * factors[i]!);
+    const urgent = Math.round(scans * urgentRatio);
+    return {
+      week,
+      scans,
+      urgent,
+      avgProcessingTimeMin: Math.max(10, Math.round(30 - i * 2)),
+    };
+  });
 }
 
 export function GOLDEN_DASHBOARD(hospitalId: string): DashboardData {
@@ -855,10 +872,10 @@ export const GOLDEN_MODEL_INSTANCES: ModelInstance[] = [
   {
     hospitalId: "nem-opava",
     hospitalName: "Nemocnice Opava",
-    status: "degraded",
-    uptimePercent: 97.34,
-    version: "v2.2.0",
-    lastDeployed: "2026-05-15",
+    status: "online",
+    uptimePercent: 99.99,
+    version: "v3.0.0",
+    lastDeployed: "2026-05-30",
     scansProcessed: 5210,
   },
   {
@@ -910,10 +927,10 @@ export const GOLDEN_LICENSES: LicenseInfo[] = [
   {
     id: "lic-003",
     hospitalName: "Nemocnice Opava",
-    licenseType: "trial",
-    validUntil: "2026-07-15",
-    maxScansPerDay: 200,
-    activeUsers: 4,
+    licenseType: "enterprise",
+    validUntil: "2028-12-31",
+    maxScansPerDay: 9999,
+    activeUsers: 50,
   },
   {
     id: "lic-004",

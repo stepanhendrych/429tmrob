@@ -28,14 +28,10 @@ const roleMaps: Record<
 > = {
   doctor: [
     { label: "Fronta snímků", icon: ClipboardList, path: "/queue", matchExact: true },
-    { label: "Klasifikátor", icon: EyeIcon, path: "/classify" },
-    { label: "Metriky modelu", icon: BarChart3, path: "/metrics" },
     { label: "Statistiky", icon: LineChart, path: "/stats" },
   ],
   radiologist: [
     { label: "Fronta snímků", icon: ClipboardList, path: "/queue", matchExact: true },
-    { label: "Klasifikátor", icon: EyeIcon, path: "/classify" },
-    { label: "Metriky modelu", icon: BarChart3, path: "/metrics" },
     { label: "Statistiky", icon: LineChart, path: "/stats" },
   ],
   it_admin: [
@@ -43,6 +39,7 @@ const roleMaps: Record<
     { label: "Licence", icon: KeyRound, path: "/licenses" },
     { label: "Auditní log", icon: ShieldCheck, path: "/audit" },
     { label: "Uživatelé", icon: Users, path: "/users" },
+    { label: "Statistiky", icon: LineChart, path: "/stats" },
   ],
   spravce: [
     { label: "Přehled kraje", icon: Map, path: "/region", matchExact: true },

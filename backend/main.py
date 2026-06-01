@@ -529,12 +529,45 @@ def compute_metrics(queue: List[Dict[str, Any]]) -> ModelMetrics:
     )
 
 def compute_weekly_stats(queue: List[Dict[str, Any]]) -> List[WeeklyStat]:
+    total = len(queue)
     urgent_count = sum(1 for item in queue if item["isUrgent"])
+    weeks = ["19. tyd", "20. tyd", "21. tyd", "22. tyd", "23. tyd"]
+    n = len(weeks)
+    urgent_ratio = urgent_count / total if total > 0 else 0.2
+
+    raw = [max(1, round((total / n) * f)) for f in [0.85, 0.92, 0.98, 1.05, 1.12]]
+    scans = list(raw)
+    diff = total - sum(scans)
+    i = 0
+    while diff != 0:
+        if diff > 0:
+            scans[i % n] += 1
+            diff -= 1
+        elif diff < 0 and scans[i % n] > 1:
+            scans[i % n] -= 1
+            diff += 1
+        i += 1
+
+    urgent_vals = [max(0, round(s * urgent_ratio)) for s in scans]
+    udiff = urgent_count - sum(urgent_vals)
+    j = 0
+    while udiff != 0:
+        if udiff > 0:
+            urgent_vals[j % n] += 1
+            udiff -= 1
+        elif udiff < 0 and urgent_vals[j % n] > 0:
+            urgent_vals[j % n] -= 1
+            udiff += 1
+        j += 1
+
     return [
-        WeeklyStat(week="17. tyd", scans=172, urgent=38, avgProcessingTimeMin=26),
-        WeeklyStat(week="18. tyd", scans=189, urgent=41, avgProcessingTimeMin=27),
-        WeeklyStat(week="19. tyd", scans=185, urgent=42, avgProcessingTimeMin=28),
-        WeeklyStat(week="20. tyd", scans=190, urgent=urgent_count, avgProcessingTimeMin=25),
+        WeeklyStat(
+            week=week,
+            scans=scans[i],
+            urgent=urgent_vals[i],
+            avgProcessingTimeMin=max(10, 30 - i * 2),
+        )
+        for i, week in enumerate(weeks)
     ]
 
 HOSPITALS: List[Hospital] = [
@@ -548,7 +581,7 @@ HOSPITALS: List[Hospital] = [
         lat=49.938,
         lng=17.902,
         rtgDevices=3,
-        dailyCapacity=220,
+        dailyCapacity=820,
         utilization=92,
     ),
     Hospital(
@@ -945,16 +978,37 @@ def list_hospital_users(hospital_id: str) -> List[User]:
             role="radiologist",
             hospitalId=hospital.id,
         ),
+        User(
+            id="u12",
+            name="Ing. Tomas Riha",
+            email="tomas.riha@nem-opava.cz",
+            role="it_admin",
+            hospitalId=hospital.id,
+        ),
+        User(
+            id="u13",
+            name="MUDr. Helena Brozova, MBA",
+            email="helena.brozova@nem-opava.cz",
+            role="reditel",
+            hospitalId=hospital.id,
+        ),
     ]
 
 @app.post("/v1/auth/login", response_model=LoginResponse)
 def login(payload: LoginRequest) -> LoginResponse:
     hospital = get_hospital_or_404(payload.hospitalId)
+    user_map = {
+        "jana.novakova@fn-ostrava.cz": {"name": "MUDr. Jana Novakova", "role": "doctor"},
+        "petr.holik@hospital.cz": {"name": "MUDr. Petr Holik", "role": "radiologist"},
+        "tomas.riha@nem-opava.cz": {"name": "Ing. Tomas Riha", "role": "it_admin"},
+        "helena.brozova@nem-opava.cz": {"name": "MUDr. Helena Brozova, MBA", "role": "reditel"},
+    }
+    entry = user_map.get(payload.email, {"name": "MUDr. Jan Novak", "role": "doctor"})
     user = User(
         id="u1",
-        name="MUDr. Jana Novakova",
+        name=entry["name"],
         email=payload.email,
-        role="doctor",
+        role=entry["role"],
         hospitalId=payload.hospitalId,
     )
     return LoginResponse(token="jwt-token", user=user, hospital=hospital)

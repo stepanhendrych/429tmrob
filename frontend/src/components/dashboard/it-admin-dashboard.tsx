@@ -3,8 +3,15 @@ import { useLocation } from "react-router-dom";
 import { AuditLogPanel } from "@/components/dashboard/audit-log-panel";
 import { LicensesPanel } from "@/components/dashboard/licenses-panel";
 import { ModelsPanel } from "@/components/dashboard/models-panel";
+import { WeeklyChart } from "@/components/dashboard/weekly-chart";
 import { useToast } from "@/context/ToastContext";
-import { getAuditLogs, getLicenses, getModelInstances, getUsers } from "@/lib/api";
+import {
+  getAuditLogs,
+  getLicenses,
+  getModelInstances,
+  getUsers,
+  getWeeklyStats,
+} from "@/lib/api";
 import { getErrorAction, safeApiCall } from "@/lib/api-utils";
 import { HospitalLogoBox } from "@/lib/hospital-config";
 import type {
@@ -13,6 +20,7 @@ import type {
   LicenseInfo,
   ModelInstance,
   UserRecord,
+  WeeklyStat,
 } from "@/lib/types";
 
 const ADMIN_HOSPITAL: Hospital = {
@@ -29,13 +37,18 @@ const ADMIN_HOSPITAL: Hospital = {
   utilization: 0,
 };
 
-export function ItAdminDashboard() {
+interface Props {
+  hospitalId: string;
+}
+
+export function ItAdminDashboard({ hospitalId }: Props) {
   const location = useLocation();
   const { addToast } = useToast();
   const [models, setModels] = useState<ModelInstance[]>([]);
   const [licenses, setLicenses] = useState<LicenseInfo[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
   const [users, setUsers] = useState<UserRecord[]>([]);
+  const [weeklyStats, setWeeklyStats] = useState<WeeklyStat[]>([]);
 
   useEffect(() => {
     safeApiCall(
@@ -90,10 +103,23 @@ export function ItAdminDashboard() {
           err.action ?? getErrorAction(err.status, "admin/users"),
         ),
     );
-  }, [addToast]);
+    safeApiCall(
+      () =>
+        getWeeklyStats(hospitalId).then((s) => {
+          setWeeklyStats(s);
+          return s;
+        }),
+      (err) =>
+        addToast(
+          err.message,
+          "error",
+          err.action ?? getErrorAction(err.status, `${hospitalId}/stats`),
+        ),
+    );
+  }, [hospitalId, addToast]);
 
   const raw = location.pathname.split("/").pop() ?? "";
-  const views = ["models", "licenses", "audit", "users"] as const;
+  const views = ["models", "licenses", "audit", "users", "stats"] as const;
   const view = views.includes(raw as (typeof views)[number]) ? raw : "models";
 
   return (
@@ -103,7 +129,7 @@ export function ItAdminDashboard() {
         <div>
           <h1 className="text-2xl font-bold">IT Administrace</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Správa modelů · licence · audit · uživatelé
+            Správa modelů · licence · audit · uživatelé · statistiky
           </p>
         </div>
       </div>
@@ -157,6 +183,8 @@ export function ItAdminDashboard() {
           </div>
         </div>
       )}
+
+      {view === "stats" && <WeeklyChart stats={weeklyStats} />}
     </div>
   );
 }

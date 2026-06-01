@@ -8,6 +8,12 @@ interface Props {
 }
 
 const licConfig = {
+  enterprise: {
+    icon: CheckCircle2,
+    label: "Enterprise",
+    color: "text-violet-600",
+    badge: "default" as const,
+  },
   full: {
     icon: CheckCircle2,
     label: "Plná",

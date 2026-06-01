@@ -67,7 +67,7 @@ export function HospitalDashboard() {
             <DoctorDashboard hospitalId={hospitalId} />
           )}
           {user.role === "spravce" && <SpravceDashboard />}
-          {user.role === "it_admin" && <ItAdminDashboard />}
+          {user.role === "it_admin" && <ItAdminDashboard hospitalId={hospitalId} />}
           {user.role === "reditel" && <DirectorDashboard />}
         </main>
       </div>
