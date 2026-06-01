@@ -59,7 +59,7 @@ export function KrajPage() {
         <div className="mx-auto flex h-16 max-w-5xl items-center gap-3 px-6">
           <HeartPulse className="h-7 w-7 text-red-500" />
           <div>
-            <h1 className="font-bold text-lg">Druhý pár očí</h1>
+            <h1 className="font-bold text-lg">VigilantRay</h1>
             <p className="text-xs text-muted-foreground">
               AI asistent pro radiologii · Moravskoslezský kraj
             </p>
@@ -80,7 +80,7 @@ export function KrajPage() {
               <Badge variant="default" className="text-[10px] bg-emerald-600">
                 AI
               </Badge>{" "}
-              = ostré vyhodnocení (po nasazení backendu)
+              = ostré vyhodnocení
             </span>
             <span className="text-muted-foreground/50">|</span>
             <span className="flex items-center gap-1">

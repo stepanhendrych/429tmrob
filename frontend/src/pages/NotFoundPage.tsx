@@ -41,7 +41,7 @@ export function NotFoundPage() {
       </div>
 
       <footer className="fixed bottom-0 border-t w-full py-4 text-center text-xs text-muted-foreground bg-background/80 backdrop-blur">
-        Druhý pár očí · AI Olympiáda 2026
+        VigilantRay · AI Olympiáda 2026
       </footer>
     </div>
   );

@@ -11,13 +11,29 @@ interface Props {
   selectedScanId?: string | null;
 }
 
-const statusConfig = {
+const statusConfig: Record<
+  string,
+  {
+    label: string;
+    icon: typeof AlertTriangle;
+    color: string;
+    bg: string;
+    badge: "destructive" | "secondary" | "default";
+  }
+> = {
   critical: {
     label: "Kritický",
     icon: AlertTriangle,
     color: "text-red-600",
     bg: "bg-red-50 dark:bg-red-950/30",
     badge: "destructive" as const,
+  },
+  normal: {
+    label: "Normální",
+    icon: CheckCircle2,
+    color: "text-emerald-600",
+    bg: "bg-emerald-50 dark:bg-emerald-950/30",
+    badge: "default" as const,
   },
   pending: {
     label: "Čeká",

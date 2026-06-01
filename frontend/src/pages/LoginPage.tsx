@@ -19,6 +19,12 @@ const roleConfig: Record<
     color:
       "border-blue-200 hover:border-blue-500 hover:bg-blue-50 dark:border-blue-800 dark:hover:border-blue-500 dark:hover:bg-blue-950",
   },
+  radiologist: {
+    icon: Stethoscope,
+    label: "Radiolog",
+    color:
+      "border-blue-200 hover:border-blue-500 hover:bg-blue-50 dark:border-blue-800 dark:hover:border-blue-500 dark:hover:bg-blue-950",
+  },
   it_admin: {
     icon: Server,
     label: "IT Administrátor",

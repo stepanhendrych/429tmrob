@@ -9,15 +9,23 @@ from fastapi import Body, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
-
 try:
     from ultralytics import YOLO
     _HAS_YOLO = True
 except ImportError:
     YOLO = None  # type: ignore
     _HAS_YOLO = False
-
 import uvicorn
+
+try:
+    from groq import Groq
+    _HAS_GROQ = True
+except ImportError:
+    Groq = None  # type: ignore
+    _HAS_GROQ = False
+
+# Inicializace klienta (bere si API klíč z os.environ.get("GROQ_API_KEY"))
+groq_client = Groq() if _HAS_GROQ and os.environ.get("GROQ_API_KEY") else None
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 IMAGES_DIR = os.path.join(BASE_DIR, "images")
@@ -66,6 +74,46 @@ def load_ai_model():
     if not os.path.exists(MODEL_PATH):
         raise RuntimeError(f"AI model not found at {MODEL_PATH}")
     return YOLO(MODEL_PATH)
+
+def generate_llm_report(dominant_class: str, dominant_conf: float, findings: List[Dict[str, Any]]) -> str:
+    if not groq_client:
+        return (
+            f"AI detekovala patologii: {dominant_class} (Jistota: {round(dominant_conf * 100, 1)}%). "
+            "[Groq API není nakonfigurováno - toto je fallback zpráva]."
+        )
+    
+    findings_summary = ""
+    for f in findings:
+        findings_summary += f"- {f['label']} (spolehlivost detekce: {round(f['confidence'] * 100, 1)}%)\n"
+
+    prompt = f"""Jsi medicínský AI asistent specializovaný na radiologii. Tvým úkolem je vytvořit stručný, profesionální a strukturovaný předběžný report pro ošetřujícího lékaře na základě výstupu z našeho detekčního modelu.
+
+Výstup z počítačového vidění:
+- Hlavní klasifikace snímku: {dominant_class}
+- Celková jistota modelu: {round(dominant_conf * 100, 1)}%
+- Detekované dílčí nálezy:
+{findings_summary}
+
+Požadavky na report:
+1. Piš česky, odborně, ale stručně (max 3–4 věty).
+2. Shrň lokalizované nálezy a popiš jejich závažnost (např. zda vyžadují okamžitou pozornost).
+3. Na konec přidej standardní varování, že se jedná o AI asistovanou triáž a finální diagnózu musí stanovit lékař.
+"""
+
+    try:
+        completion = groq_client.chat.completions.create(
+            model="llama3-8b-8192",
+            messages=[
+                {"role": "system", "content": "Jsi zkušený radiolog a mluvíš vědecky a strukturovaně v českém jazyce."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.2,
+            max_tokens=250
+        )
+        return completion.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"⚠️ Selhalo volání Groq API: {e}")
+        return f"AI detekovala {dominant_class}. Generování detailního reportu pomocí LLM selhalo."
 
 def map_yolo_results(results: list[Any]) -> Dict[str, Any]:
     if not results:
@@ -124,7 +172,7 @@ def map_yolo_results(results: list[Any]) -> Dict[str, Any]:
     detected_boxes = []
     if hasattr(result, "boxes") and result.boxes is not None:
         for box in result.boxes:
-            coords = box.xyxy[0].tolist()  # [xmin, ymin, xmax, ymax] v pixelech
+            coords = box.xyxy[0].tolist()  # [xmin, ymin, xmax, ymax]
             conf = float(box.conf[0].item())
             cls_id = int(box.cls[0].item())
             cls_name = str(names[cls_id]).upper()
@@ -142,7 +190,7 @@ def map_yolo_results(results: list[Any]) -> Dict[str, Any]:
     for rule in rules:
         prob = pred.get(rule["key"], 0.0)
         if prob >= rule["threshold"]:
-            # Pokusíme se najít odpovídající box pro danou třídu anomálie
+            # Napárování krabičky na konkrétní pravidlo/nález
             matching_box = next((b["coords"] for b in detected_boxes if b["key"] == rule["key"]), None)
             
             findings.append(
@@ -159,7 +207,7 @@ def map_yolo_results(results: list[Any]) -> Dict[str, Any]:
     if not findings:
         findings.append(
             {
-                "label": "Bez zjevnych patologickych nalezu",
+                "label": "Bez zjevnych patologickych nalezenu",
                 "confidence": round(dominant_conf, 4),
                 "category": "celkovy obraz",
                 "box": None,
@@ -179,10 +227,8 @@ def map_yolo_results(results: list[Any]) -> Dict[str, Any]:
     else:
         classification = f"NALEZ - {display_map.get(dominant_class, 'Patologie')}"
         
-    llm_report = (
-        "AI detekovala pravdepodobne nalezy a lokalizovala je na snimku. "
-        "Vysledek slouzi k prioritizaci a musi byt potvrzen lekarem."
-    )
+    # VOLÁNÍ DYNAMICKÉHO REPORTU Z GROQ
+    llm_report = generate_llm_report(dominant_class, dominant_conf, findings)
     
     return {
         "classification": classification,
@@ -829,38 +875,42 @@ def startup_state() -> None:
         print(f"⚠️ Model se nenasel, bezime bez nej: {e}")
         app.state.model = None
         
-    app.state.opava_queue = [
-        build_queue_item(
-            scan_id="X-5521",
-            patient_id="P-9921",
-            patient_age=61,
-            patient_sex="M",
-            submitted_at=(now - timedelta(minutes=22)).isoformat(),
-            wait_minutes=22,
-            scenario=AI_MOCK_RESULTS[2],
-            image_url=pick_image("PNEUMONIA", used_images),
-        ),
-        build_queue_item(
-            scan_id="X-5522",
-            patient_id="P-1182",
-            patient_age=47,
-            patient_sex="Z",
-            submitted_at=(now - timedelta(minutes=8)).isoformat(),
-            wait_minutes=8,
-            scenario=AI_MOCK_RESULTS[0],
-            image_url=pick_image("NORMAL", used_images),
-        ),
-        build_queue_item(
-            scan_id="X-5523",
-            patient_id="P-4521",
-            patient_age=73,
-            patient_sex="M",
-            submitted_at=(now - timedelta(minutes=35)).isoformat(),
-            wait_minutes=35,
-            scenario=AI_MOCK_RESULTS[5],
-            image_url=pick_image("PNEUMONIA", used_images),
-        ),
-    ]
+    normal_scenarios = [AI_MOCK_RESULTS[0], AI_MOCK_RESULTS[1]]
+    pneumonia_scenarios = AI_MOCK_RESULTS[2:]
+    app.state.opava_queue = []
+    counter = 0
+    for img in ALL_NORMAL:
+        sub = "train" if img in TRAIN_NORMAL else "test"
+        scenario = normal_scenarios[counter % len(normal_scenarios)]
+        app.state.opava_queue.append(
+            build_queue_item(
+                scan_id=f"X-{5521 + counter}",
+                patient_id=f"P-{1000 + counter}",
+                patient_age=random.randint(20, 85),
+                patient_sex=random.choice(["M", "Z"]),
+                submitted_at=(now - timedelta(minutes=random.randint(0, 120))).isoformat(),
+                wait_minutes=random.randint(0, 120),
+                scenario=scenario,
+                image_url=f"/static/images/{sub}/NORMAL/{img}",
+            )
+        )
+        counter += 1
+    for img in ALL_PNEUMONIA:
+        sub = "train" if img in TRAIN_PNEUMONIA else "test"
+        scenario = pneumonia_scenarios[counter % len(pneumonia_scenarios)]
+        app.state.opava_queue.append(
+            build_queue_item(
+                scan_id=f"X-{5521 + counter}",
+                patient_id=f"P-{2000 + counter}",
+                patient_age=random.randint(20, 85),
+                patient_sex=random.choice(["M", "Z"]),
+                submitted_at=(now - timedelta(minutes=random.randint(0, 120))).isoformat(),
+                wait_minutes=random.randint(0, 120),
+                scenario=scenario,
+                image_url=f"/static/images/{sub}/PNEUMONIA/{img}",
+            )
+        )
+        counter += 1
     recalculate_opava_queue(app.state.opava_queue)
 
 def get_hospital_or_404(hospital_id: str) -> Hospital:

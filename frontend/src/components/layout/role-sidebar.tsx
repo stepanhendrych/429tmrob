@@ -32,6 +32,12 @@ const roleMaps: Record<
     { label: "Metriky modelu", icon: BarChart3, path: "/metrics" },
     { label: "Statistiky", icon: LineChart, path: "/stats" },
   ],
+  radiologist: [
+    { label: "Fronta snímků", icon: ClipboardList, path: "/queue", matchExact: true },
+    { label: "Klasifikátor", icon: EyeIcon, path: "/classify" },
+    { label: "Metriky modelu", icon: BarChart3, path: "/metrics" },
+    { label: "Statistiky", icon: LineChart, path: "/stats" },
+  ],
   it_admin: [
     { label: "Přehled modelů", icon: Cpu, path: "/models" },
     { label: "Licence", icon: KeyRound, path: "/licenses" },
@@ -52,6 +58,7 @@ const roleMaps: Record<
 
 const roleLabels: Record<Role, string> = {
   doctor: "Lékař",
+  radiologist: "Radiolog",
   it_admin: "IT Admin",
   spravce: "Správce kraje",
   reditel: "Ředitel",
@@ -76,7 +83,7 @@ export function RoleSidebar({ role, hospitalId }: Props) {
         onClick={() => navigate(base)}
       >
         <HeartPulse className="h-5 w-5 text-red-500" />
-        <span className="font-bold text-sm">Druhý pár očí</span>
+        <span className="font-bold text-sm">VigilantRay</span>
       </div>
 
       <nav className="flex-1 space-y-1 p-3">
