@@ -96,6 +96,8 @@ export function ScanReview({ scan, onBack, onSubmit, hospitalId }: Props) {
   const [showHoneypotAlert, setShowHoneypotAlert] = useState(false);
   const [honeypotWrong, setHoneypotWrong] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+  const [fractureMarkers, setFractureMarkers] = useState<{ x: number; y: number }[]>([]);
+  const imageContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Reset state when scan changes
@@ -105,6 +107,7 @@ export function ScanReview({ scan, onBack, onSubmit, hospitalId }: Props) {
     setSubmitting(false);
     setShowHoneypotAlert(false);
     setHoneypotWrong(false);
+    setFractureMarkers([]);
   }, [scan.scanId]);
 
   // Cooldown timer
@@ -114,11 +117,18 @@ export function ScanReview({ scan, onBack, onSubmit, hospitalId }: Props) {
     return () => clearInterval(id);
   }, [cooldown]);
 
+  const handleImageClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setFractureMarkers((prev) => [...prev, { x, y }]);
+  };
+
   const handleSubmit = async () => {
     if (!decision) return;
     setSubmitting(true);
     const ok = await safeApiCall(
-      () => submitReview(hospitalId, scan.scanId, decision, doctorNote || undefined),
+      () => submitReview(hospitalId, scan.scanId, decision, doctorNote || undefined, fractureMarkers),
       (err) =>
         addToast(
           err.message,
@@ -299,18 +309,59 @@ export function ScanReview({ scan, onBack, onSubmit, hospitalId }: Props) {
 
           {/* Demo X-ray image */}
           <div className="rounded-lg overflow-hidden border bg-black">
-            <img
-              src={
-                scan.imageUrl ||
-                `/images/xray-${(parseInt(scan.scanId.replace(/\D/g, ""), 10) % 2) + 1}.webp`
-              }
-              alt={`RTG snímek ${scan.scanId}`}
-              className="w-full h-auto max-h-[400px] object-contain mx-auto"
-            />
-            <div className="px-3 py-1.5 bg-black/80 border-t border-white/10">
-              <p className="text-xs text-white/60 text-center">
-                {scan.scanId} · {scan.patientId} · demo snímek
+            <div
+              ref={imageContainerRef}
+              className="relative cursor-crosshair"
+              onClick={handleImageClick}
+            >
+              <img
+                src={
+                  scan.imageUrl ||
+                  `/images/xray-${(parseInt(scan.scanId.replace(/\D/g, ""), 10) % 2) + 1}.webp`
+                }
+                alt={`RTG snímek ${scan.scanId}`}
+                className="w-full h-auto max-h-[400px] object-contain mx-auto"
+                draggable={false}
+              />
+              {fractureMarkers.map((m, i) => (
+                <div
+                  key={i}
+                  className="absolute pointer-events-none"
+                  style={{ left: `${m.x}%`, top: `${m.y}%`, transform: "translate(-50%, -50%)" }}
+                >
+                  <div className="relative w-8 h-8">
+                    <div className="absolute inset-0 rounded-full border-2 border-red-400 opacity-80" />
+                    <div className="absolute top-1/2 left-0 w-full h-0.5 bg-red-400 -translate-y-1/2 opacity-80" />
+                    <div className="absolute left-1/2 top-0 h-full w-0.5 bg-red-400 -translate-x-1/2 opacity-80" />
+                    <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-red-500 border-2 border-white text-[6px] font-bold text-white flex items-center justify-center">
+                      {i + 1}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center justify-between px-3 py-1.5 bg-black/80 border-t border-white/10">
+              <p className="text-xs text-white/60">
+                Kliknutím označte oblast nálezu
               </p>
+              <div className="flex items-center gap-2">
+                {fractureMarkers.length > 0 && (
+                  <>
+                    <span className="text-xs text-white/60">
+                      {fractureMarkers.length} značek
+                    </span>
+                    <button
+                      onClick={() => setFractureMarkers([])}
+                      className="text-[10px] text-red-400 hover:text-red-300 underline"
+                    >
+                      Smazat
+                    </button>
+                  </>
+                )}
+                <span className="text-xs text-white/40">
+                  {scan.scanId} · {scan.patientId}
+                </span>
+              </div>
             </div>
           </div>
         </CardContent>

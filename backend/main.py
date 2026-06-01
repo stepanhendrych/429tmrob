@@ -341,10 +341,15 @@ class FeedbackRequest(BaseModel):
 class FeedbackResponse(BaseModel):
     success: bool
 
+class MarkedPoint(BaseModel):
+    x: float
+    y: float
+
 class ReviewRequest(BaseModel):
     scanId: str
     decision: str
     doctorNote: Optional[str] = None
+    fractureMarkers: Optional[List[MarkedPoint]] = None
 
 class ReviewResponse(BaseModel):
     success: bool
@@ -1146,8 +1151,10 @@ def classify_scan(
 @app.post("/v1/hospitals/{hospital_id}/review", response_model=ReviewResponse)
 def submit_review(hospital_id: str, payload: ReviewRequest) -> ReviewResponse:
     get_hospital_or_404(hospital_id)
+    marker_count = len(payload.fractureMarkers) if payload.fractureMarkers else 0
     print(
-        "Review: Snimek", payload.scanId, "rozhodnuti", payload.decision, "poznamka", payload.doctorNote or "-",
+        "Review: Snimek", payload.scanId, "rozhodnuti", payload.decision,
+        "poznamka", payload.doctorNote or "-", "markeru", marker_count,
     )
     return ReviewResponse(success=True)
 
