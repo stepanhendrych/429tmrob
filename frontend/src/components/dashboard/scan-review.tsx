@@ -25,10 +25,6 @@ import type { DoctorDecision, QueueItem } from "@/lib/types";
 interface Props {
   scan: QueueItem;
   onBack: () => void;
-  onNext?: () => void;
-  onPrev?: () => void;
-  hasNext?: boolean;
-  hasPrev?: boolean;
   onSubmit?: (scan: QueueItem) => void;
 }
 
@@ -75,14 +71,12 @@ const DECISION_BUTTONS: {
 ];
 
 const KEYBINDINGS = [
-  { key: "←", action: "Předchozí snímek" },
-  { key: "→", action: "Další snímek" },
   { key: "1", action: "Vše v pořádku" },
   { key: "2", action: "Něco jiného" },
   { key: "3", action: "AI má pravdu" },
   { key: "Ctrl+Enter", action: "Odeslat hodnocení" },
   { key: "?", action: "Zobrazit klávesové zkratky" },
-  { key: "Esc", action: "Zavřít nápovědu / Zpět" },
+  { key: "Esc", action: "Zavřít nápovědu / Zpět na přehled" },
 ];
 
 function probColor(p: number): string {
@@ -91,21 +85,12 @@ function probColor(p: number): string {
   return "text-emerald-600";
 }
 
-export function ScanReview({
-  scan,
-  onBack,
-  onNext,
-  onPrev,
-  hasNext,
-  hasPrev,
-  onSubmit,
-}: Props) {
+export function ScanReview({ scan, onBack, onSubmit }: Props) {
   const { addToast } = useToast();
   const { settings } = useSettings();
   const [decision, setDecision] = useState<DoctorDecision>(null);
   const [doctorNote, setDoctorNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showHoneypotAlert, setShowHoneypotAlert] = useState(false);
   const [honeypotWrong, setHoneypotWrong] = useState(false);
@@ -117,7 +102,6 @@ export function ScanReview({
     setDecision(null);
     setDoctorNote("");
     setSubmitting(false);
-    setSubmitted(false);
     setShowHoneypotAlert(false);
     setHoneypotWrong(false);
   }, [scan.scanId]);
@@ -143,7 +127,6 @@ export function ScanReview({
     );
     setSubmitting(false);
     if (ok) {
-      setSubmitted(true);
       const isHoneypot = scan.honeypot && scan.correctAnswer;
       if (isHoneypot && decision !== scan.correctAnswer) {
         setHoneypotWrong(true);
@@ -155,8 +138,8 @@ export function ScanReview({
         );
       } else {
         addToast("Hodnocení odesláno — děkujeme za zpětnou vazbu.", "success");
+        onSubmit?.(scan);
       }
-      onSubmit?.(scan);
     }
   };
 
@@ -165,10 +148,6 @@ export function ScanReview({
 
   const onBackRef = useRef(onBack);
   onBackRef.current = onBack;
-  const onPrevRef = useRef(onPrev);
-  onPrevRef.current = onPrev;
-  const onNextRef = useRef(onNext);
-  onNextRef.current = onNext;
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -179,25 +158,8 @@ export function ScanReview({
         }
         return;
       }
-      if (submitted) {
-        if (e.key === "Escape") {
-          onBackRef.current();
-          e.preventDefault();
-        }
-        return;
-      }
       if (e.key === "Escape") {
         onBackRef.current();
-        e.preventDefault();
-        return;
-      }
-      if (e.key === "ArrowLeft" && onPrevRef.current && hasPrev) {
-        onPrevRef.current();
-        e.preventDefault();
-        return;
-      }
-      if (e.key === "ArrowRight" && onNextRef.current && hasNext) {
-        onNextRef.current();
         e.preventDefault();
         return;
       }
@@ -230,52 +192,11 @@ export function ScanReview({
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [showHelp, submitted, hasPrev, hasNext, cooldown]);
-
-  const DECISION_LABELS: Record<string, string> = {
-    healthy: "Pacient je zdravý",
-    different: "Jiný nález",
-    agreed: "AI souhlasí",
-  };
-
-  const decisionKey = decision ?? "";
-
-  if (submitted) {
-    return (
-      <Card>
-        <CardContent className="py-12 text-center space-y-4">
-          <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-500" />
-          <h2 className="text-lg font-bold">Hodnocení odesláno</h2>
-          <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-            Vaše rozhodnutí: <strong>{DECISION_LABELS[decisionKey] ?? "—"}</strong>
-            {doctorNote && <> · Poznámka: {doctorNote}</>}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Data vstupují do trénovacího pipeline modelu.
-          </p>
-          <div className="flex items-center justify-center gap-2">
-            {onPrev && hasPrev && (
-              <Button variant="outline" size="sm" onClick={onPrev}>
-                ← Předchozí
-              </Button>
-            )}
-            <Button variant="outline" size="sm" onClick={onBack}>
-              Zpět na frontu
-            </Button>
-            {onNext && hasNext && (
-              <Button variant="outline" size="sm" onClick={onNext}>
-                Další →
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  }, [showHelp, cooldown]);
 
   return (
     <div className="space-y-6">
-      {/* Scan header with navigation + help */}
+      {/* Scan header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <h2 className="text-lg font-bold flex items-center gap-2">
@@ -299,21 +220,9 @@ export function ScanReview({
             <HelpCircle className="h-3.5 w-3.5" />
           </button>
         </div>
-        <div className="flex items-center gap-2">
-          {hasPrev && onPrev && (
-            <Button variant="outline" size="sm" onClick={onPrev}>
-              ← Předchozí
-            </Button>
-          )}
-          {hasNext && onNext && (
-            <Button variant="outline" size="sm" onClick={onNext}>
-              Další →
-            </Button>
-          )}
-          <Button variant="ghost" size="sm" onClick={onBack}>
-            Zpět
-          </Button>
-        </div>
+        <Button variant="ghost" size="sm" onClick={onBack}>
+          Zpět
+        </Button>
       </div>
 
       {/* Patient info */}
@@ -474,25 +383,40 @@ export function ScanReview({
           </div>
 
           {/* Submit */}
-          <Button
-            className="w-full"
-            disabled={!decision || submitting || cooldown > 0}
-            onClick={handleSubmit}
-          >
-            {submitting ? (
-              <>Odesílám...</>
-            ) : cooldown > 0 ? (
-              <>Cooldown {cooldown}s</>
-            ) : (
-              <>
-                <Send className="h-4 w-4 mr-1.5" />
-                Odeslat hodnocení
-                <kbd className="ml-2 rounded border border-white/20 px-1.5 py-0.5 text-[10px] opacity-70">
-                  Ctrl+Enter
-                </kbd>
-              </>
-            )}
-          </Button>
+          {honeypotWrong && cooldown > 0 ? (
+            <div className="space-y-2">
+              <div className="rounded-lg border-2 border-red-300 bg-red-50 dark:bg-red-950/20 px-4 py-3">
+                <p className="text-sm font-semibold text-red-700 dark:text-red-400 flex items-center gap-2">
+                  <ShieldAlert className="h-4 w-4" />
+                  Test kvality — vyčkejte prosím
+                </p>
+                <p className="text-xs text-red-600 dark:text-red-300 mt-1">
+                  Zadejte prosím správné hodnocení po uplynutí prodlevy.
+                </p>
+              </div>
+              <Button className="w-full" disabled>
+                Cooldown {cooldown}s
+              </Button>
+            </div>
+          ) : (
+            <Button
+              className="w-full"
+              disabled={!decision || submitting || cooldown > 0}
+              onClick={handleSubmit}
+            >
+              {submitting ? (
+                <>Odesílám...</>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-1.5" />
+                  Odeslat hodnocení
+                  <kbd className="ml-2 rounded border border-white/20 px-1.5 py-0.5 text-[10px] opacity-70">
+                    Ctrl+Enter
+                  </kbd>
+                </>
+              )}
+            </Button>
+          )}
         </CardContent>
       </Card>
 

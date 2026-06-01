@@ -9,6 +9,7 @@ import { UtilizationBar } from "@/components/dashboard/utilization-bar";
 import { WeeklyChart } from "@/components/dashboard/weekly-chart";
 import { FatigueTracker } from "@/components/fatigue-tracker";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/context/ToastContext";
 import { getDashboard, getWeeklyStats } from "@/lib/api";
 import { getErrorAction, safeApiCall } from "@/lib/api-utils";
@@ -25,14 +26,13 @@ export function DoctorDashboard({ hospitalId }: Props) {
   const [data, setData] = useState<DashboardData | null>(null);
   const [weeklyStats, setWeeklyStats] = useState<WeeklyStat[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [selectedScanId, setSelectedScanId] = useState<string | null>(null);
   const [reviewedScans, setReviewedScans] = useState<QueueItem[]>([]);
   const [reviewCount, setReviewCount] = useState(0);
+  const [inReview, setInReview] = useState(false);
 
   const handleScanReviewed = useCallback((scan: QueueItem) => {
     setReviewedScans((prev) => [scan, ...prev]);
     setReviewCount((c) => c + 1);
-    setSelectedScanId(null);
   }, []);
 
   useEffect(() => {
@@ -77,21 +77,7 @@ export function DoctorDashboard({ hospitalId }: Props) {
         .sort((a, b) => b.priorityScore - a.priorityScore)
     : [];
 
-  const selectedScan = selectedScanId
-    ? (activeQueue.find((s) => s.scanId === selectedScanId) ?? null)
-    : null;
-
-  const currentIndex = selectedScan ? activeQueue.indexOf(selectedScan) : -1;
-  const hasPrev = currentIndex > 0;
-  const hasNext = currentIndex >= 0 && currentIndex < activeQueue.length - 1;
-
-  const goToPrev = () => {
-    if (hasPrev) setSelectedScanId(activeQueue[currentIndex - 1]!.scanId);
-  };
-
-  const goToNext = () => {
-    if (hasNext) setSelectedScanId(activeQueue[currentIndex + 1]!.scanId);
-  };
+  const currentScan = inReview && activeQueue.length > 0 ? activeQueue[0] : null;
 
   if (error && !data) {
     return (
@@ -120,29 +106,45 @@ export function DoctorDashboard({ hospitalId }: Props) {
         </div>
       </div>
 
-      {/* Scan review mode */}
-      {selectedScan ? (
+      {/* Scan review mode — system feeds scans one by one */}
+      {currentScan ? (
         <ScanReview
-          scan={selectedScan}
-          onBack={() => setSelectedScanId(null)}
-          onNext={hasNext ? goToNext : undefined}
-          onPrev={hasPrev ? goToPrev : undefined}
-          hasNext={hasNext}
-          hasPrev={hasPrev}
+          scan={currentScan}
+          onBack={() => setInReview(false)}
           onSubmit={handleScanReviewed}
         />
       ) : (
         <>
           {(view === "queue" || view === "metrics") && (
             <>
+              {/* Auto-start button when scans are available but not reviewing */}
+              {activeQueue.length > 0 && !inReview && (
+                <div className="rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 p-6 text-center">
+                  <p className="text-lg font-semibold mb-1">
+                    {activeQueue.length} snímků čeká na vyhodnocení
+                  </p>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Systém vám bude postupně předkládat snímky k analýze.
+                  </p>
+                  <Button onClick={() => setInReview(true)}>Začít vyhodnocovat</Button>
+                </div>
+              )}
+
+              {/* Empty state */}
+              {activeQueue.length === 0 && reviewedScans.length > 0 && (
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-950/20 p-6 text-center">
+                  <CheckCircle2 className="h-8 w-8 text-emerald-500 mx-auto mb-2" />
+                  <p className="text-lg font-semibold">Všechny snímky vyhodnoceny</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Celkem {reviewedScans.length} snímků prošlo vaším hodnocením.
+                  </p>
+                </div>
+              )}
+
               <MetricsCards data={data} />
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2">
-                  <QueuePanel
-                    queue={data.queue}
-                    onSelectScan={(scanId) => setSelectedScanId(scanId)}
-                    selectedScanId={selectedScanId}
-                  />
+                  <QueuePanel queue={activeQueue} />
                 </div>
                 <div className="space-y-6">
                   <FatigueTracker reviewCount={reviewCount} />
@@ -159,8 +161,7 @@ export function DoctorDashboard({ hospitalId }: Props) {
                     </h3>
                     {reviewedScans.length === 0 ? (
                       <p className="text-xs text-muted-foreground">
-                        Klikněte na snímek ve frontě pro zobrazení AI vyhodnocení a
-                        odeslání zpětné vazby.
+                        Po odeslání hodnocení se snímky zobrazí zde.
                       </p>
                     ) : (
                       <div className="space-y-1.5 max-h-[300px] overflow-y-auto">
@@ -199,7 +200,7 @@ export function DoctorDashboard({ hospitalId }: Props) {
             <div className="rounded-lg border p-8 text-center text-muted-foreground">
               <p className="font-medium">Klasifikátor je součástí detailu snímku</p>
               <p className="text-sm mt-1">
-                Vyberte snímek z fronty pro zobrazení AI vyhodnocení.
+                Systém automaticky předkládá snímky k vyhodnocení.
               </p>
             </div>
           )}
