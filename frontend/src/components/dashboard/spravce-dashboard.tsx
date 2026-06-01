@@ -1,9 +1,14 @@
+import { Clock, Coffee, RotateCcw, Settings2, ShieldAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { ChmuPanel } from "@/components/dashboard/chmu-panel";
 import { RedirectPanel } from "@/components/dashboard/redirect-panel";
 import { RegionHeatmap } from "@/components/dashboard/region-heatmap";
 import { WeeklyChart } from "@/components/dashboard/weekly-chart";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useSettings } from "@/context/SettingsContext";
 import { useToast } from "@/context/ToastContext";
 import {
   getChmuData,
@@ -48,7 +53,7 @@ export function SpravceDashboard() {
   }, [addToast]);
 
   const raw = location.pathname.split("/").pop() ?? "";
-  const views = ["region", "prediction", "redirect", "stats"] as const;
+  const views = ["region", "prediction", "redirect", "stats", "settings"] as const;
   const view = views.includes(raw as (typeof views)[number]) ? raw : "region";
 
   if (!region) {
@@ -95,6 +100,8 @@ export function SpravceDashboard() {
 
       {view === "stats" && <WeeklyChart stats={weeklyStats} />}
 
+      {view === "settings" && <SettingsPanel />}
+
       {view === "region" && (
         <>
           <RedirectPanel suggestions={redirects} hospitals={region.hospitals} />
@@ -116,5 +123,158 @@ export function SpravceDashboard() {
         </>
       )}
     </div>
+  );
+}
+
+function SettingsPanel() {
+  const { settings, updateSettings, resetSettings } = useSettings();
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <Settings2 className="h-4 w-4" />
+          Nastavení aplikace
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <p className="text-sm text-muted-foreground">
+          Nastavení se ukládají do prohlížeče a aplikují se na všechny lékaře v kraji.
+        </p>
+
+        {/* Honeypot cooldown */}
+        <div className="space-y-2">
+          <label
+            htmlFor="honeypot-cooldown"
+            className="text-sm font-medium flex items-center gap-2"
+          >
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            Cooldown po chybném honeypotu (s)
+          </label>
+          <div className="flex items-center gap-3">
+            <input
+              id="honeypot-cooldown"
+              type="range"
+              min={1}
+              max={30}
+              value={settings.honeypotCooldownSeconds}
+              onChange={(e) =>
+                updateSettings({ honeypotCooldownSeconds: Number(e.target.value) })
+              }
+              className="flex-1"
+            />
+            <span className="text-sm font-mono w-8 text-right">
+              {settings.honeypotCooldownSeconds}s
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Počet sekund, po které lékař nemůže odeslat hodnocení po chybném honeypotu.
+          </p>
+        </div>
+
+        {/* Fatigue click threshold */}
+        <div className="space-y-2">
+          <label
+            htmlFor="fatigue-click"
+            className="text-sm font-medium flex items-center gap-2"
+          >
+            <Coffee className="h-4 w-4 text-muted-foreground" />
+            Práh únavy — kliky
+          </label>
+          <div className="flex items-center gap-3">
+            <input
+              id="fatigue-click"
+              type="range"
+              min={5}
+              max={100}
+              value={settings.fatigueClickThreshold}
+              onChange={(e) =>
+                updateSettings({ fatigueClickThreshold: Number(e.target.value) })
+              }
+              className="flex-1"
+            />
+            <span className="text-sm font-mono w-8 text-right">
+              {settings.fatigueClickThreshold}
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Počet kliků, po kterém se zobrazí modál detekce únavy.
+          </p>
+        </div>
+
+        {/* Fatigue review threshold */}
+        <div className="space-y-2">
+          <label
+            htmlFor="fatigue-review"
+            className="text-sm font-medium flex items-center gap-2"
+          >
+            <ShieldAlert className="h-4 w-4 text-muted-foreground" />
+            Práh únavy — hodnocení
+          </label>
+          <div className="flex items-center gap-3">
+            <input
+              id="fatigue-review"
+              type="range"
+              min={1}
+              max={20}
+              value={settings.fatigueReviewThreshold}
+              onChange={(e) =>
+                updateSettings({ fatigueReviewThreshold: Number(e.target.value) })
+              }
+              className="flex-1"
+            />
+            <span className="text-sm font-mono w-8 text-right">
+              {settings.fatigueReviewThreshold}
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Počet odeslaných hodnocení, po kterém se zobrazí modál.
+          </p>
+        </div>
+
+        {/* Fatigue modal cooldown */}
+        <div className="space-y-2">
+          <label
+            htmlFor="fatigue-modal-cooldown"
+            className="text-sm font-medium flex items-center gap-2"
+          >
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            Cooldown modálu únavy (s)
+          </label>
+          <div className="flex items-center gap-3">
+            <input
+              id="fatigue-modal-cooldown"
+              type="range"
+              min={10}
+              max={300}
+              step={10}
+              value={settings.fatigueModalCooldownSeconds}
+              onChange={(e) =>
+                updateSettings({ fatigueModalCooldownSeconds: Number(e.target.value) })
+              }
+              className="flex-1"
+            />
+            <span className="text-sm font-mono w-12 text-right">
+              {settings.fatigueModalCooldownSeconds}s
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Minimální prodleva mezi jednotlivými modály únavy.
+          </p>
+        </div>
+
+        <div className="border-t pt-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={resetSettings}
+            className="flex items-center gap-2"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            Obnovit výchozí hodnoty
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

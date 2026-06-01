@@ -2,8 +2,8 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { AuthProvider } from "@/context/AuthContext";
 import { HospitalProvider } from "@/context/HospitalContext";
-import { ToastProvider } from "@/context/ToastContext";
 import { SettingsProvider } from "@/context/SettingsContext";
+import { ToastProvider } from "@/context/ToastContext";
 import { HospitalDashboard } from "@/pages/HospitalDashboard";
 import { KrajPage } from "@/pages/KrajPage";
 import { LoginPage } from "@/pages/LoginPage";
@@ -20,7 +20,10 @@ export default function App() {
                 <Routes>
                   <Route path="/" element={<KrajPage />} />
                   <Route path="/login/:hospitalId" element={<LoginPage />} />
-                  <Route path="/dashboard/:hospitalId/*" element={<HospitalDashboard />} />
+                  <Route
+                    path="/dashboard/:hospitalId/*"
+                    element={<HospitalDashboard />}
+                  />
                   <Route path="/404" element={<NotFoundPage />} />
                   <Route path="*" element={<NotFoundPage />} />
                 </Routes>

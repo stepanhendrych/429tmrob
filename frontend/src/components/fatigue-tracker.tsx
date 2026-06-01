@@ -31,7 +31,8 @@ export function FatigueTracker({ reviewCount }: Props) {
   const checkFatigue = useCallback(() => {
     if (dismissed) return;
     const now = Date.now();
-    if (now - lastDismissRef.current < settings.fatigueModalCooldownSeconds * 1000) return;
+    if (now - lastDismissRef.current < settings.fatigueModalCooldownSeconds * 1000)
+      return;
     setShowModal(true);
   }, [dismissed, settings.fatigueModalCooldownSeconds]);
 
@@ -45,7 +46,10 @@ export function FatigueTracker({ reviewCount }: Props) {
         time: Date.now(),
       });
       if (clickPositions.current.length > 30) clickPositions.current.shift();
-      if (totalClicks + 1 >= settings.fatigueClickThreshold || sameSpot(clickPositions.current)) {
+      if (
+        totalClicks + 1 >= settings.fatigueClickThreshold ||
+        sameSpot(clickPositions.current)
+      ) {
         checkFatigue();
         setTotalClicks(0);
       }

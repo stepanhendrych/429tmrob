@@ -9,6 +9,7 @@ import {
   KeyRound,
   LineChart,
   Map,
+  Settings2,
   ShieldCheck,
   TrendingUp,
   Users,
@@ -42,6 +43,7 @@ const roleMaps: Record<
     { label: "Predikce zátěže", icon: Cloud, path: "/prediction" },
     { label: "Přesměrování", icon: ArrowLeftRight, path: "/redirect" },
     { label: "Statistiky", icon: LineChart, path: "/stats" },
+    { label: "Nastavení", icon: Settings2, path: "/settings" },
   ],
   reditel: [
     { label: "Výsledky center", icon: TrendingUp, path: "/results", matchExact: true },
