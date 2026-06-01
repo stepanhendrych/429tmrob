@@ -8,10 +8,11 @@ import {
   HelpCircle,
   Keyboard,
   Send,
+  ShieldAlert,
   User,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,6 +28,7 @@ interface Props {
   onPrev?: () => void;
   hasNext?: boolean;
   hasPrev?: boolean;
+  onSubmit?: (scan: QueueItem) => void;
 }
 
 const DECISION_BUTTONS: {
@@ -88,14 +90,34 @@ function probColor(p: number): string {
   return "text-emerald-600";
 }
 
-export function ScanReview({ scan, onBack, onNext, onPrev, hasNext, hasPrev }: Props) {
+export function ScanReview({
+  scan,
+  onBack,
+  onNext,
+  onPrev,
+  hasNext,
+  hasPrev,
+  onSubmit,
+}: Props) {
   const { addToast } = useToast();
   const [decision, setDecision] = useState<DoctorDecision>(null);
   const [doctorNote, setDoctorNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [showHoneypotAlert, setShowHoneypotAlert] = useState(false);
+  const [honeypotWrong, setHoneypotWrong] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Reset state when scan changes
+  useEffect(() => {
+    setDecision(null);
+    setDoctorNote("");
+    setSubmitting(false);
+    setSubmitted(false);
+    setShowHoneypotAlert(false);
+    setHoneypotWrong(false);
+  }, [scan.scanId]);
 
   const handleSubmit = async () => {
     if (!decision) return;
@@ -112,7 +134,18 @@ export function ScanReview({ scan, onBack, onNext, onPrev, hasNext, hasPrev }: P
     setSubmitting(false);
     if (ok) {
       setSubmitted(true);
-      addToast("Hodnocení odesláno — děkujeme za zpětnou vazbu.", "success");
+      const isHoneypot = scan.honeypot && scan.correctAnswer;
+      if (isHoneypot && decision !== scan.correctAnswer) {
+        setHoneypotWrong(true);
+        setShowHoneypotAlert(true);
+        addToast(
+          "SNÍMEK HODNOCEN CHYBNĚ! Odesílám upozornění administrátorovi.",
+          "error",
+        );
+      } else {
+        addToast("Hodnocení odesláno — děkujeme za zpětnou vazbu.", "success");
+      }
+      onSubmit?.(scan);
     }
   };
 
@@ -237,6 +270,15 @@ export function ScanReview({ scan, onBack, onNext, onPrev, hasNext, hasPrev }: P
             <FileText className="h-5 w-5" />
             Snímek {scan.scanId}
           </h2>
+          {scan.honeypot && (
+            <Badge
+              variant="outline"
+              className="border-amber-400 text-amber-600 dark:text-amber-400 text-[10px] flex items-center gap-1"
+            >
+              <ShieldAlert className="h-3 w-3" />
+              Test kvality
+            </Badge>
+          )}
           <button
             onClick={() => setShowHelp(true)}
             className="flex h-7 w-7 items-center justify-center rounded-md border text-xs text-muted-foreground hover:bg-muted transition-colors"
@@ -333,15 +375,18 @@ export function ScanReview({ scan, onBack, onNext, onPrev, hasNext, hasPrev }: P
             </p>
           </div>
 
-          {/* Image placeholder */}
-          <div className="rounded-lg border-2 border-dashed bg-muted/30 p-8 text-center">
-            <FileText className="mx-auto h-10 w-10 text-muted-foreground mb-2" />
-            <p className="text-sm font-medium text-muted-foreground">
-              RTG snímek — zobrazení po napojení na PACS
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {scan.scanId} · {scan.patientId}
-            </p>
+          {/* Demo X-ray image */}
+          <div className="rounded-lg overflow-hidden border bg-black">
+            <img
+              src={`/images/xray-${(parseInt(scan.scanId.replace(/\D/g, ""), 10) % 2) + 1}.webp`}
+              alt={`RTG snímek ${scan.scanId}`}
+              className="w-full h-auto max-h-[400px] object-contain mx-auto"
+            />
+            <div className="px-3 py-1.5 bg-black/80 border-t border-white/10">
+              <p className="text-xs text-white/60 text-center">
+                {scan.scanId} · {scan.patientId} · demo snímek
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -436,6 +481,52 @@ export function ScanReview({ scan, onBack, onNext, onPrev, hasNext, hasPrev }: P
           </Button>
         </CardContent>
       </Card>
+
+      {/* Honeypot alert modal */}
+      {showHoneypotAlert && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+          onClick={() => setShowHoneypotAlert(false)}
+        >
+          <div
+            className="rounded-xl border-2 border-red-400 bg-background shadow-2xl max-w-md w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between bg-red-50 dark:bg-red-950/30 px-5 py-4 rounded-t-xl">
+              <h3 className="font-bold flex items-center gap-2 text-red-700 dark:text-red-400">
+                <ShieldAlert className="h-5 w-5" />
+                Test kvality — chybné hodnocení
+              </h3>
+            </div>
+            <div className="p-5 space-y-3">
+              <p className="text-sm">
+                Tento snímek byl součástí <strong>testu kvality</strong> (honeypot). AI
+                vyhodnotila snímek <strong>správně</strong> — Vaše hodnocení se neshoduje.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Očekávaná odpověď byla: <strong>AI má pravdu</strong> (souhlas s AI).
+              </p>
+              <div className="rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 p-3 text-sm">
+                <p className="font-medium text-amber-800 dark:text-amber-300">
+                  Upozornění bylo odesláno administrátorovi.
+                </p>
+                <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
+                  Toto slouží k monitorování kvality práce lékařů.
+                </p>
+              </div>
+            </div>
+            <div className="border-t px-5 py-3 flex justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowHoneypotAlert(false)}
+              >
+                Rozumím
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Help modal */}
       {showHelp && (

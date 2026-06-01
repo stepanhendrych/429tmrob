@@ -208,6 +208,34 @@ const LLM_REPORTS: Record<string, string> = {
     "Nenalezeny známky patologických změn s jistotou 95 %. Klasifikace: normální nález.",
   "X-1031":
     "Detekován vzorec odpovídající pneumotoraxu s jistotou 96 %. Doporučuji zkontrolovat pravostranný pneumotorax s posunem mediastina. URGENTNÍ — nutné neodkladné vyšetření.",
+  "X-1032":
+    "Detekován vzorec odpovídající plicní embolii s jistotou 88 %. Doporučuji zkontrolovat periferní opacity a rozšíření plicní tepny.",
+  "X-1033":
+    "Nenalezeny známky patologických změn s jistotou 91 %. Klasifikace: normální nález.",
+  "X-1034":
+    "Detekován vzorec odpovídající atelektáze s jistotou 73 %. Doporučuji zkontrolovat zvýšenou denzitu v levém dolním laloku.",
+  "X-1035":
+    "Detekován vzorec odpovídající plicní fibróze s jistotou 67 %. Doporučuji zkontrolovat retikulární opacity a honeycombing v bazálních segmentech.",
+  "X-1036":
+    "Nenalezeny známky patologických změn s jistotou 84 %. Klasifikace: normální nález.",
+  "X-1037":
+    "Detekován vzorec odpovídající tuberkulóze s jistotou 81 %. Doporučuji zkontrolovat apikální infiltráty a kavitární léze.",
+  "X-1038":
+    "Detekován vzorec odpovídající pneumonii s jistotou 59 %. Doporučuji zkontrolovat lobární konsolidaci v pravém středním laloku.",
+  "X-1039":
+    "Nenalezeny známky patologických změn s jistotou 93 %. Klasifikace: normální nález.",
+  "H-1001":
+    "Detekován vzorec odpovídající fraktuře žeber s jistotou 97 %. Jasně patrná linie fraktury na 4. a 5. żebru vpravo v laterálním úseku. HONEYPOT TEST.",
+  "H-1002":
+    "Detekován vzorec odpovídající fraktuře žeber s jistotou 97 %. Jasně patrná linie fraktury na 4. a 5. żebru vpravo v laterálním úseku. HONEYPOT TEST.",
+  "H-1003":
+    "Detekován vzorec odpovídající fraktuře žeber s jistotou 97 %. Jasně patrná linie fraktury na 4. a 5. żebru vpravo v laterálním úseku. HONEYPOT TEST.",
+  "H-1004":
+    "Detekován vzorec odpovídající fraktuře žeber s jistotou 97 %. Jasně patrná linie fraktury na 4. a 5. żebru vpravo v laterálním úseku. HONEYPOT TEST.",
+  "H-1005":
+    "Detekován vzorec odpovídající fraktuře žeber s jistotou 97 %. Jasně patrná linie fraktury na 4. a 5. żebru vpravo v laterálním úseku. HONEYPOT TEST.",
+  "H-1006":
+    "Detekován vzorec odpovídající fraktuře žeber s jistotou 97 %. Jasně patrná linie fraktury na 4. a 5. żebru vpravo v laterálním úseku. HONEYPOT TEST.",
 };
 
 function buildQueueItem(
@@ -271,6 +299,25 @@ export function GOLDEN_QUEUE(hospitalId: string): QueueItem[] {
         submittedAt: "2026-06-01T08:10:00",
         waitTimeMinutes: 10,
       },
+      {
+        scanId: "H-1001",
+        patientId: "P-4550",
+        patientAge: 59,
+        patientSex: "M",
+        probability: 0.97,
+        isUrgent: false,
+        status: "pending",
+        submittedAt: "2026-06-01T09:00:00",
+        waitTimeMinutes: 0,
+        honeypot: true,
+        correctAnswer: "agreed",
+        classification: "NÁLEZ",
+        findings: [
+          { label: "Fraktura 4. žebra vpravo", confidence: 0.97, category: "kosterní" },
+          { label: "Fraktura 5. žebra vpravo", confidence: 0.95, category: "kosterní" },
+          { label: "Drobný pleurální výpotek", confidence: 0.42, category: "pleurální" },
+        ],
+      },
     ],
     "nem-karvina": [
       {
@@ -295,9 +342,206 @@ export function GOLDEN_QUEUE(hospitalId: string): QueueItem[] {
         submittedAt: "2026-06-01T08:30:00",
         waitTimeMinutes: 0,
       },
+      {
+        scanId: "H-1002",
+        patientId: "P-4551",
+        patientAge: 44,
+        patientSex: "F",
+        probability: 0.97,
+        isUrgent: false,
+        status: "pending",
+        submittedAt: "2026-06-01T09:05:00",
+        waitTimeMinutes: 0,
+        honeypot: true,
+        correctAnswer: "agreed",
+        classification: "NÁLEZ",
+        findings: [
+          { label: "Fraktura 4. žebra vpravo", confidence: 0.97, category: "kosterní" },
+          { label: "Fraktura 5. žebra vpravo", confidence: 0.95, category: "kosterní" },
+        ],
+      },
+    ],
+    "nem-opava": [
+      {
+        scanId: "X-1032",
+        patientId: "P-4539",
+        patientAge: 55,
+        patientSex: "M",
+        probability: 0.88,
+        isUrgent: true,
+        status: "critical",
+        submittedAt: "2026-06-01T07:45:00",
+        waitTimeMinutes: 35,
+      },
+      {
+        scanId: "X-1033",
+        patientId: "P-4540",
+        patientAge: 41,
+        patientSex: "F",
+        probability: 0.09,
+        isUrgent: false,
+        status: "pending",
+        submittedAt: "2026-06-01T08:05:00",
+        waitTimeMinutes: 15,
+      },
+      {
+        scanId: "X-1030",
+        patientId: "P-4537",
+        patientAge: 29,
+        patientSex: "M",
+        probability: 0.45,
+        isUrgent: false,
+        status: "pending",
+        submittedAt: "2026-06-01T08:10:00",
+        waitTimeMinutes: 10,
+      },
+      {
+        scanId: "H-1003",
+        patientId: "P-4552",
+        patientAge: 61,
+        patientSex: "M",
+        probability: 0.97,
+        isUrgent: false,
+        status: "pending",
+        submittedAt: "2026-06-01T09:10:00",
+        waitTimeMinutes: 0,
+        honeypot: true,
+        correctAnswer: "agreed",
+        classification: "NÁLEZ",
+        findings: [
+          { label: "Fraktura 4. žebra vpravo", confidence: 0.97, category: "kosterní" },
+          { label: "Fraktura 5. žebra vpravo", confidence: 0.95, category: "kosterní" },
+        ],
+      },
+    ],
+    "nem-trinec": [
+      {
+        scanId: "X-1034",
+        patientId: "P-4541",
+        patientAge: 60,
+        patientSex: "M",
+        probability: 0.73,
+        isUrgent: false,
+        status: "pending",
+        submittedAt: "2026-06-01T07:30:00",
+        waitTimeMinutes: 50,
+      },
+      {
+        scanId: "X-1035",
+        patientId: "P-4542",
+        patientAge: 52,
+        patientSex: "F",
+        probability: 0.67,
+        isUrgent: false,
+        status: "pending",
+        submittedAt: "2026-06-01T08:00:00",
+        waitTimeMinutes: 20,
+      },
+      {
+        scanId: "H-1004",
+        patientId: "P-4553",
+        patientAge: 37,
+        patientSex: "M",
+        probability: 0.97,
+        isUrgent: false,
+        status: "pending",
+        submittedAt: "2026-06-01T09:15:00",
+        waitTimeMinutes: 0,
+        honeypot: true,
+        correctAnswer: "agreed",
+        classification: "NÁLEZ",
+        findings: [
+          { label: "Fraktura 4. žebra vpravo", confidence: 0.97, category: "kosterní" },
+          { label: "Fraktura 5. žebra vpravo", confidence: 0.95, category: "kosterní" },
+        ],
+      },
+    ],
+    "nem-bruntal": [
+      {
+        scanId: "X-1036",
+        patientId: "P-4543",
+        patientAge: 38,
+        patientSex: "F",
+        probability: 0.16,
+        isUrgent: false,
+        status: "pending",
+        submittedAt: "2026-06-01T07:50:00",
+        waitTimeMinutes: 30,
+      },
+      {
+        scanId: "X-1037",
+        patientId: "P-4544",
+        patientAge: 70,
+        patientSex: "M",
+        probability: 0.81,
+        isUrgent: true,
+        status: "pending",
+        submittedAt: "2026-06-01T08:15:00",
+        waitTimeMinutes: 5,
+      },
+      {
+        scanId: "H-1005",
+        patientId: "P-4554",
+        patientAge: 50,
+        patientSex: "F",
+        probability: 0.97,
+        isUrgent: false,
+        status: "pending",
+        submittedAt: "2026-06-01T09:20:00",
+        waitTimeMinutes: 0,
+        honeypot: true,
+        correctAnswer: "agreed",
+        classification: "NÁLEZ",
+        findings: [
+          { label: "Fraktura 4. žebra vpravo", confidence: 0.97, category: "kosterní" },
+          { label: "Fraktura 5. žebra vpravo", confidence: 0.95, category: "kosterní" },
+        ],
+      },
+    ],
+    "pol-frydek": [
+      {
+        scanId: "X-1038",
+        patientId: "P-4545",
+        patientAge: 47,
+        patientSex: "F",
+        probability: 0.59,
+        isUrgent: false,
+        status: "pending",
+        submittedAt: "2026-06-01T07:35:00",
+        waitTimeMinutes: 45,
+      },
+      {
+        scanId: "X-1039",
+        patientId: "P-4546",
+        patientAge: 33,
+        patientSex: "M",
+        probability: 0.07,
+        isUrgent: false,
+        status: "pending",
+        submittedAt: "2026-06-01T08:25:00",
+        waitTimeMinutes: 0,
+      },
+      {
+        scanId: "H-1006",
+        patientId: "P-4555",
+        patientAge: 66,
+        patientSex: "F",
+        probability: 0.97,
+        isUrgent: false,
+        status: "pending",
+        submittedAt: "2026-06-01T09:25:00",
+        waitTimeMinutes: 0,
+        honeypot: true,
+        correctAnswer: "agreed",
+        classification: "NÁLEZ",
+        findings: [
+          { label: "Fraktura 4. žebra vpravo", confidence: 0.97, category: "kosterní" },
+          { label: "Fraktura 5. žebra vpravo", confidence: 0.95, category: "kosterní" },
+        ],
+      },
     ],
   };
-  return (queues[hospitalId] ?? []).map(buildQueueItem);
+  return (queues[hospitalId] ?? []).map(buildQueueItem) as QueueItem[];
 }
 
 export const GOLDEN_METRICS: ModelMetrics = {

@@ -43,6 +43,8 @@ export interface QueueItem {
   llmReport: string;
   classification?: "NÁLEZ" | "NORMÁLNÍ";
   findings?: Finding[];
+  honeypot?: boolean;
+  correctAnswer?: DoctorDecision;
 }
 
 export interface Finding {
