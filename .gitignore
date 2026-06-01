@@ -1,6 +1,5 @@
 # Konfigurace a environment
 *.log
-.env
 dist/
 build/
 .vscode/mcp.json
