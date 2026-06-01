@@ -1,6 +1,7 @@
 import { Coffee } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useSettings } from "@/context/SettingsContext";
 
 interface Props {
   reviewCount: number;
@@ -20,6 +21,7 @@ function sameSpot(positions: { x: number; y: number; time: number }[]): boolean 
 }
 
 export function FatigueTracker({ reviewCount }: Props) {
+  const { settings } = useSettings();
   const [totalClicks, setTotalClicks] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [dismissed, setDismissed] = useState(false);
@@ -29,9 +31,9 @@ export function FatigueTracker({ reviewCount }: Props) {
   const checkFatigue = useCallback(() => {
     if (dismissed) return;
     const now = Date.now();
-    if (now - lastDismissRef.current < 60000) return;
+    if (now - lastDismissRef.current < settings.fatigueModalCooldownSeconds * 1000) return;
     setShowModal(true);
-  }, [dismissed]);
+  }, [dismissed, settings.fatigueModalCooldownSeconds]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -43,24 +45,21 @@ export function FatigueTracker({ reviewCount }: Props) {
         time: Date.now(),
       });
       if (clickPositions.current.length > 30) clickPositions.current.shift();
-      if (
-        totalClicks + 1 >= FATIGUE_CLICK_THRESHOLD ||
-        sameSpot(clickPositions.current)
-      ) {
+      if (totalClicks + 1 >= settings.fatigueClickThreshold || sameSpot(clickPositions.current)) {
         checkFatigue();
         setTotalClicks(0);
       }
     };
     window.addEventListener("click", handleClick);
     return () => window.removeEventListener("click", handleClick);
-  }, [checkFatigue, showModal, dismissed, totalClicks]);
+  }, [checkFatigue, showModal, dismissed, totalClicks, settings.fatigueClickThreshold]);
 
   useEffect(() => {
     if (dismissed) return;
-    if (reviewCount > 0 && reviewCount % FATIGUE_REVIEW_THRESHOLD === 0) {
+    if (reviewCount > 0 && reviewCount % settings.fatigueReviewThreshold === 0) {
       checkFatigue();
     }
-  }, [reviewCount, checkFatigue, dismissed]);
+  }, [reviewCount, checkFatigue, dismissed, settings.fatigueReviewThreshold]);
 
   const handleDismiss = () => {
     setShowModal(false);

@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/context/ToastContext";
+import { useSettings } from "@/context/SettingsContext";
 import { submitReview } from "@/lib/api";
 import { getErrorAction, safeApiCall } from "@/lib/api-utils";
 import type { DoctorDecision, QueueItem } from "@/lib/types";
@@ -100,6 +101,7 @@ export function ScanReview({
   onSubmit,
 }: Props) {
   const { addToast } = useToast();
+  const { settings } = useSettings();
   const [decision, setDecision] = useState<DoctorDecision>(null);
   const [doctorNote, setDoctorNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -107,6 +109,7 @@ export function ScanReview({
   const [showHelp, setShowHelp] = useState(false);
   const [showHoneypotAlert, setShowHoneypotAlert] = useState(false);
   const [honeypotWrong, setHoneypotWrong] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Reset state when scan changes
@@ -118,6 +121,13 @@ export function ScanReview({
     setShowHoneypotAlert(false);
     setHoneypotWrong(false);
   }, [scan.scanId]);
+
+  // Cooldown timer
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const id = setInterval(() => setCooldown((c) => c - 1), 1000);
+    return () => clearInterval(id);
+  }, [cooldown]);
 
   const handleSubmit = async () => {
     if (!decision) return;
@@ -138,8 +148,9 @@ export function ScanReview({
       if (isHoneypot && decision !== scan.correctAnswer) {
         setHoneypotWrong(true);
         setShowHoneypotAlert(true);
+        setCooldown(settings.honeypotCooldownSeconds);
         addToast(
-          "SNÍMEK HODNOCEN CHYBNĚ! Odesílám upozornění administrátorovi.",
+          `SNÍMEK HODNOCEN CHYBNĚ! Cooldown ${settings.honeypotCooldownSeconds} s. Odesílám upozornění administrátorovi.`,
           "error",
         );
       } else {
@@ -205,6 +216,7 @@ export function ScanReview({
         e.preventDefault();
         return;
       }
+      if (cooldown > 0) return;
       if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
         e.preventDefault();
         submitRef.current();
@@ -218,7 +230,7 @@ export function ScanReview({
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [showHelp, submitted, hasPrev, hasNext]);
+  }, [showHelp, submitted, hasPrev, hasNext, cooldown]);
 
   const DECISION_LABELS: Record<string, string> = {
     healthy: "Pacient je zdravý",
@@ -464,11 +476,13 @@ export function ScanReview({
           {/* Submit */}
           <Button
             className="w-full"
-            disabled={!decision || submitting}
+            disabled={!decision || submitting || cooldown > 0}
             onClick={handleSubmit}
           >
             {submitting ? (
               <>Odesílám...</>
+            ) : cooldown > 0 ? (
+              <>Cooldown {cooldown}s</>
             ) : (
               <>
                 <Send className="h-4 w-4 mr-1.5" />
