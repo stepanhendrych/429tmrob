@@ -39,6 +39,7 @@
   ],
   // List of extensions recommended by VS Code that should not be recommended for users of this workspace.
   "unwantedRecommendations": [
-    "ms-vscode.vscode-chat-customizations-evaluations"
+    "ms-vscode.vscode-chat-customizations-evaluations",
+    "jonathan-yeung.mark-sharp"
   ]
 }
