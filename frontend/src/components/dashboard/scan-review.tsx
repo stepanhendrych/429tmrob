@@ -139,7 +139,7 @@ export function ScanReview({ scan, onBack, onSubmit, hospitalId }: Props) {
         );
       } else {
         addToast("Hodnocení odesláno", "success", undefined, 1000);
-        onSubmit?.(scan);
+        onSubmit?.({ ...scan, doctorDecision: decision });
       }
     }
   };
