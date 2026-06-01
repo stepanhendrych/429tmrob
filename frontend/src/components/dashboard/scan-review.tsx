@@ -26,6 +26,7 @@ interface Props {
   scan: QueueItem;
   onBack: () => void;
   onSubmit?: (scan: QueueItem) => void;
+  hospitalId: string;
 }
 
 const DECISION_BUTTONS: {
@@ -85,7 +86,7 @@ function probColor(p: number): string {
   return "text-emerald-600";
 }
 
-export function ScanReview({ scan, onBack, onSubmit }: Props) {
+export function ScanReview({ scan, onBack, onSubmit, hospitalId }: Props) {
   const { addToast } = useToast();
   const { settings } = useSettings();
   const [decision, setDecision] = useState<DoctorDecision>(null);
@@ -117,7 +118,7 @@ export function ScanReview({ scan, onBack, onSubmit }: Props) {
     if (!decision) return;
     setSubmitting(true);
     const ok = await safeApiCall(
-      () => submitReview(scan.scanId, decision, doctorNote || undefined),
+      () => submitReview(hospitalId, scan.scanId, decision, doctorNote || undefined),
       (err) =>
         addToast(
           err.message,

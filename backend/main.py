@@ -280,6 +280,16 @@ class FeedbackResponse(BaseModel):
     success: bool
 
 
+class ReviewRequest(BaseModel):
+    scanId: str
+    decision: str
+    doctorNote: Optional[str] = None
+
+
+class ReviewResponse(BaseModel):
+    success: bool
+
+
 class AuditLogEntry(BaseModel):
     id: str
     timestamp: str
@@ -1026,6 +1036,20 @@ def classify_scan(
         llmReport=scenario["llmReport"],
         imageUrl=image_url or dataset_image_url,
     )
+
+
+@app.post("/v1/hospitals/{hospital_id}/review", response_model=ReviewResponse)
+def submit_review(hospital_id: str, payload: ReviewRequest) -> ReviewResponse:
+    get_hospital_or_404(hospital_id)
+    print(
+        "Review: Snimek",
+        payload.scanId,
+        "rozhodnuti",
+        payload.decision,
+        "poznamka",
+        payload.doctorNote or "-",
+    )
+    return ReviewResponse(success=True)
 
 
 @app.post("/v1/hospitals/{hospital_id}/feedback", response_model=FeedbackResponse)

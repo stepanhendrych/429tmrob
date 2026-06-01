@@ -1,28 +1,3 @@
-/**
- * API service layer.
- *
- * ─── Golden data (demo) ───
- * All endpoints return static golden data.
- *
- * ─── Backend connection ───
- * When Adam's backend is ready:
- *   1. Only Nemocnice Opava ("nem-opava") will have real AI evaluation.
- *   2. All other hospitals keep returning golden (static) data.
- *   3. Replace function bodies with fetch() but gate on hospitalId:
- *
- *      if (hospitalId !== "nem-opava") return GOLDEN_...(hospitalId);
- *      const res = await fetch(`https://api.druhy-par-oci.cz/v1/...`);
- *      return res.json();
- *
- * ─── Auth ───
- * Currently demo-style: user picks role → mocked user.
- * Later: real JWT from /auth/login.
- *
- * ─── Classify ───
- * Only works for Opava on backend. Other hospitals get a
- * golden "demo" classification response.
- */
-
 import {
   GOLDEN_AUDIT_LOGS,
   GOLDEN_CHMU,
@@ -53,18 +28,22 @@ import type {
 } from "./types";
 import { ApiError } from "./types";
 
-/* ─── EXAMPLE: real backend guard ───
+const BASE = "/api/v1";
 
-async function realOrGolden<T>(
-  hospitalId: string,
-  goldenFn: (id: string) => T,
-  url: string,
-): Promise<T> {
-  if (hospitalId !== "nem-opava") return goldenFn(hospitalId);
-  const res = await fetch(url);
+async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
+  const res = await fetch(`${BASE}${url}`, options);
+  if (!res.ok) {
+    throw new ApiError(`API chyba: ${res.status} ${res.statusText}`, res.status, {
+      label: "Zkusit znovu",
+      onClick: () => window.location.reload(),
+    });
+  }
   return res.json();
 }
-*/
+
+function isOpava(id: string): boolean {
+  return id === "nem-opava";
+}
 
 /** ─── HOSPITALS ─── */
 
@@ -87,16 +66,13 @@ export async function getHospital(id: string): Promise<Hospital> {
 /** ─── AUTH ─── */
 
 export async function login(hospitalId: string, email: string): Promise<LoginResponse> {
-  /* Backend:
-     const res = await fetch(`https://api.druhy-par-oci.cz/v1/auth/login`, {
-       method: "POST", headers: { "Content-Type": "application/json" },
-       body: JSON.stringify({ hospitalId, email }),
-     });
-     if (!res.ok) throw new ApiError("Přihlášení selhalo.", res.status, {
-       label: "Zkusit znovu", onClick: () => window.location.reload(),
-     });
-     return res.json();
-  */
+  if (isOpava(hospitalId)) {
+    return apiFetch("/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ hospitalId, email }),
+    });
+  }
   const hospital = GOLDEN_HOSPITALS.find((h) => h.id === hospitalId) ?? null;
   const users = GOLDEN_USERS[hospitalId] ?? GOLDEN_USERS.spravce ?? [];
   const user = users.find((u) => u.email === email);
@@ -113,6 +89,9 @@ export async function login(hospitalId: string, email: string): Promise<LoginRes
 export async function getUsersForHospital(
   hospitalId: string,
 ): Promise<{ id: string; name: string; email: string; role: string }[]> {
+  if (isOpava(hospitalId)) {
+    return apiFetch(`/hospitals/${hospitalId}/users`);
+  }
   if (hospitalId === "spravce") {
     return (GOLDEN_USERS.spravce ?? []).map((u) => ({
       id: u.id,
@@ -132,14 +111,9 @@ export async function getUsersForHospital(
 /** ─── DASHBOARD ─── */
 
 export async function getDashboard(hospitalId: string): Promise<DashboardData> {
-  /* Backend: only Opava is real
-     if (hospitalId !== "nem-opava") return GOLDEN_DASHBOARD(hospitalId);
-     const res = await fetch(`https://api.druhy-par-oci.cz/v1/hospitals/${hospitalId}/dashboard`);
-     if (!res.ok) throw new ApiError("Nepodařilo se načíst data pracoviště.", res.status, {
-       label: "Zkusit znovu", onClick: () => window.location.reload(),
-     });
-     return res.json();
-  */
+  if (isOpava(hospitalId)) {
+    return apiFetch(`/hospitals/${hospitalId}/dashboard`);
+  }
   const data = GOLDEN_DASHBOARD(hospitalId);
   if (!data) {
     throw new ApiError(`Nepodařilo se načíst dashboard pro "${hospitalId}".`, 404, {
@@ -153,16 +127,25 @@ export async function getDashboard(hospitalId: string): Promise<DashboardData> {
 }
 
 export async function getQueue(hospitalId: string): Promise<QueueItem[]> {
+  if (isOpava(hospitalId)) {
+    return apiFetch(`/hospitals/${hospitalId}/queue`);
+  }
   return GOLDEN_DASHBOARD(hospitalId).queue;
 }
 
 export async function getMetrics(hospitalId: string): Promise<DashboardData["metrics"]> {
+  if (isOpava(hospitalId)) {
+    return apiFetch(`/hospitals/${hospitalId}/metrics`);
+  }
   return GOLDEN_DASHBOARD(hospitalId).metrics;
 }
 
 export async function getWeeklyStats(
   hospitalId: string,
 ): Promise<DashboardData["weeklyStats"]> {
+  if (isOpava(hospitalId)) {
+    return apiFetch(`/hospitals/${hospitalId}/weekly-stats`);
+  }
   return GOLDEN_DASHBOARD(hospitalId).weeklyStats;
 }
 
@@ -175,17 +158,16 @@ export async function getUsers(): Promise<UserRecord[]> {
 }
 
 export async function classifyScan(
-  _hospitalId: string,
-  _imageBase64: string,
+  hospitalId: string,
+  imageBase64: string,
 ): Promise<ClassifyResponse> {
-  /* Backend: only Opava sends real images
-     if (hospitalId !== "nem-opava") return goldenClassify();
-     const res = await fetch(`https://api.druhy-par-oci.cz/v1/hospitals/${hospitalId}/classify`, {
-       method: "POST", headers: { "Content-Type": "application/json" },
-       body: JSON.stringify({ imageBase64 }),
-     });
-     return res.json();
-  */
+  if (isOpava(hospitalId)) {
+    return apiFetch(`/hospitals/${hospitalId}/classify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ imageBase64 }),
+    });
+  }
   return {
     scanId: "X-NEW",
     classification: "NÁLEZ",
@@ -234,20 +216,18 @@ export async function getLicenses(): Promise<LicenseInfo[]> {
 }
 
 export async function submitReview(
-  _scanId: string,
-  _decision: "healthy" | "different" | "agreed",
-  _doctorNote?: string,
+  hospitalId: string,
+  scanId: string,
+  decision: "healthy" | "different" | "agreed",
+  doctorNote?: string,
 ): Promise<{ success: boolean }> {
-  /* Backend:
-     const res = await fetch(`https://api.druhy-par-oci.cz/v1/scans/${scanId}/review`, {
-       method: "POST", headers: { "Content-Type": "application/json" },
-       body: JSON.stringify({ decision, doctorNote }),
-     });
-     if (!res.ok) throw new ApiError("Odeslání hodnocení selhalo.", res.status, {
-       label: "Zkusit znovu", onClick: () => window.location.reload(),
-     });
-     return res.json();
-  */
+  if (isOpava(hospitalId)) {
+    return apiFetch(`/hospitals/${hospitalId}/review`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ scanId, decision, doctorNote }),
+    });
+  }
   return { success: true };
 }
 

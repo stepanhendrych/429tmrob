@@ -112,6 +112,7 @@ export function DoctorDashboard({ hospitalId }: Props) {
           scan={currentScan}
           onBack={() => setInReview(false)}
           onSubmit={handleScanReviewed}
+          hospitalId={hospitalId}
         />
       ) : (
         <>
