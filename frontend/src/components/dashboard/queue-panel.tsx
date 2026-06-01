@@ -100,7 +100,16 @@ export function QueuePanel({ queue, onSelectScan, selectedScanId }: Props) {
                       <span className="font-mono text-sm font-semibold">
                         {item.scanId}
                       </span>
-                      <Badge variant={st.badge}>{st.label}</Badge>
+                      <Badge
+                        variant={st.badge}
+                        className={
+                          item.status === "critical"
+                            ? "bg-red-500 text-black dark:bg-red-600 dark:text-white"
+                            : ""
+                        }
+                      >
+                        {st.label}
+                      </Badge>
                       {item.antiStarvationBoost > 0 && (
                         <Badge
                           variant="outline"
