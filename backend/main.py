@@ -9,6 +9,7 @@ from fastapi import Body, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from dotenv import load_dotenv
 try:
     from ultralytics import YOLO
     _HAS_YOLO = True
@@ -17,6 +18,8 @@ except ImportError:
     _HAS_YOLO = False
 import uvicorn
 
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
+
 try:
     from groq import Groq
     _HAS_GROQ = True
@@ -24,8 +27,8 @@ except ImportError:
     Groq = None  # type: ignore
     _HAS_GROQ = False
 
-# Inicializace klienta (bere si API klíč z os.environ.get("GROQ_API_KEY"))
-groq_client = Groq() if _HAS_GROQ and os.environ.get("GROQ_API_KEY") else None
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+groq_client = Groq(api_key=GROQ_API_KEY) if _HAS_GROQ and GROQ_API_KEY else None
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 IMAGES_DIR = os.path.join(BASE_DIR, "images")
@@ -102,7 +105,7 @@ Požadavky na report:
 
     try:
         completion = groq_client.chat.completions.create(
-            model="llama3-8b-8192",
+            model="llama-3.1-8b-instant",
             messages=[
                 {"role": "system", "content": "Jsi zkušený radiolog a mluvíš vědecky a strukturovaně v českém jazyce."},
                 {"role": "user", "content": prompt}
