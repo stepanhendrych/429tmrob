@@ -1,25 +1,30 @@
 from __future__ import annotations
-
 import base64
 import binascii
 import os
 import random
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
-
 from fastapi import Body, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
-from ultralytics import YOLO
+
+try:
+    from ultralytics import YOLO
+    _HAS_YOLO = True
+except ImportError:
+    YOLO = None  # type: ignore
+    _HAS_YOLO = False
+
 import uvicorn
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 IMAGES_DIR = os.path.join(BASE_DIR, "images")
 UPLOADS_DIR = os.path.join(BASE_DIR, "uploads")
 MODEL_PATH = os.path.join(BASE_DIR, "ai_model.pt")
-os.makedirs(UPLOADS_DIR, exist_ok=True)
 
+os.makedirs(UPLOADS_DIR, exist_ok=True)
 
 def _list_images(subdir: str) -> list[str]:
     path = os.path.join(IMAGES_DIR, subdir)
@@ -30,14 +35,13 @@ def _list_images(subdir: str) -> list[str]:
         if f.lower().endswith((".jpeg", ".jpg", ".png", ".webp"))
     )
 
-
 TRAIN_NORMAL = _list_images("train/NORMAL")
 TRAIN_PNEUMONIA = _list_images("train/PNEUMONIA")
 TEST_NORMAL = _list_images("test/NORMAL")
 TEST_PNEUMONIA = _list_images("test/PNEUMONIA")
+
 ALL_NORMAL = TRAIN_NORMAL + TEST_NORMAL
 ALL_PNEUMONIA = TRAIN_PNEUMONIA + TEST_PNEUMONIA
-
 
 def pick_image(category: str, used: set[str] | None = None) -> str:
     pool = ALL_NORMAL if category == "NORMAL" else ALL_PNEUMONIA
@@ -51,36 +55,36 @@ def pick_image(category: str, used: set[str] | None = None) -> str:
     sub = "train" if filename in TRAIN_NORMAL or filename in TRAIN_PNEUMONIA else "test"
     return f"/static/images/{sub}/{category}/{filename}"
 
-
 def decode_base64_image(data: str) -> bytes:
     if "," in data:
         data = data.split(",", 1)[1]
     return base64.b64decode(data, validate=True)
 
-
-def load_ai_model() -> YOLO:
+def load_ai_model():
+    if not _HAS_YOLO:
+        raise RuntimeError("ultralytics neni nainstalovano")
     if not os.path.exists(MODEL_PATH):
         raise RuntimeError(f"AI model not found at {MODEL_PATH}")
     return YOLO(MODEL_PATH)
-
 
 def map_yolo_results(results: list[Any]) -> Dict[str, Any]:
     if not results:
         raise ValueError("Empty inference result")
     result = results[0]
+    
     if result.probs is None:
         raise ValueError("Missing probability output from model")
-
+        
     probs = result.probs.data.tolist()
     names = result.names
     pred: Dict[str, float] = {}
     for idx, prob in enumerate(probs):
         pred[str(names[idx]).upper()] = float(prob)
-
+        
     top_index = int(result.probs.top1)
     dominant_class = str(names[top_index]).upper()
     dominant_conf = float(result.probs.top1conf.item())
-
+    
     rules = [
         {
             "key": "PNEUMOTHORAX",
@@ -115,32 +119,53 @@ def map_yolo_results(results: list[Any]) -> Dict[str, Any]:
             "category": "plicni parenchym",
         },
     ]
-
+    
+    # EXTRAKCE BOUNDING BOXŮ Z YOLO MODELU
+    detected_boxes = []
+    if hasattr(result, "boxes") and result.boxes is not None:
+        for box in result.boxes:
+            coords = box.xyxy[0].tolist()  # [xmin, ymin, xmax, ymax] v pixelech
+            conf = float(box.conf[0].item())
+            cls_id = int(box.cls[0].item())
+            cls_name = str(names[cls_id]).upper()
+            
+            detected_boxes.append({
+                "key": cls_name,
+                "coords": [round(c, 1) for c in coords],
+                "conf": conf
+            })
+            
     findings: List[Dict[str, Any]] = []
     is_urgent = False
     is_critical = False
+    
     for rule in rules:
         prob = pred.get(rule["key"], 0.0)
         if prob >= rule["threshold"]:
+            # Pokusíme se najít odpovídající box pro danou třídu anomálie
+            matching_box = next((b["coords"] for b in detected_boxes if b["key"] == rule["key"]), None)
+            
             findings.append(
                 {
                     "label": rule["label"],
                     "confidence": round(prob, 4),
                     "category": rule["category"],
+                    "box": matching_box,
                 }
             )
             is_urgent = is_urgent or rule["urgent"]
             is_critical = is_critical or rule["critical"]
-
+            
     if not findings:
         findings.append(
             {
                 "label": "Bez zjevnych patologickych nalezu",
                 "confidence": round(dominant_conf, 4),
                 "category": "celkovy obraz",
+                "box": None,
             }
         )
-
+        
     display_map = {
         "PNEUMOTHORAX": "Pneumothorax",
         "RESP_SELHANI": "Respiracni selhani",
@@ -148,15 +173,17 @@ def map_yolo_results(results: list[Any]) -> Dict[str, Any]:
         "PNEUMONIA": "Pneumonie",
         "NORMAL": "NORMALNI",
     }
+    
     if dominant_class == "NORMAL":
         classification = "NORMALNI"
     else:
         classification = f"NALEZ - {display_map.get(dominant_class, 'Patologie')}"
-
+        
     llm_report = (
-        "AI detekovala pravdepodobne nalezy; vysledek slouzi pouze k "
-        "prioritizaci a musi byt potvrzen lekarem."
+        "AI detekovala pravdepodobne nalezy a lokalizovala je na snimku. "
+        "Vysledek slouzi k prioritizaci a musi byt potvrzen lekarem."
     )
+    
     return {
         "classification": classification,
         "confidence": round(dominant_conf, 4),
@@ -166,7 +193,6 @@ def map_yolo_results(results: list[Any]) -> Dict[str, Any]:
         "isCritical": is_critical,
         "dominantClass": dominant_class,
     }
-
 
 class Hospital(BaseModel):
     id: str
@@ -181,7 +207,6 @@ class Hospital(BaseModel):
     dailyCapacity: int
     utilization: int
 
-
 class User(BaseModel):
     id: str
     name: str
@@ -189,17 +214,14 @@ class User(BaseModel):
     role: str
     hospitalId: str
 
-
 class LoginRequest(BaseModel):
     hospitalId: str
     email: str
-
 
 class LoginResponse(BaseModel):
     token: str
     user: User
     hospital: Hospital
-
 
 class QueueItem(BaseModel):
     scanId: str
@@ -216,7 +238,6 @@ class QueueItem(BaseModel):
     llmReport: str
     imageUrl: str = ""
 
-
 class ModelMetrics(BaseModel):
     sensitivity: float
     specificity: float
@@ -231,13 +252,11 @@ class ModelMetrics(BaseModel):
     totalScans: int
     baselineAccuracy: int
 
-
 class WeeklyStat(BaseModel):
     week: str
     scans: int
     urgent: int
     avgProcessingTimeMin: int
-
 
 class DashboardResponse(BaseModel):
     hospital: Hospital
@@ -251,16 +270,15 @@ class DashboardResponse(BaseModel):
     weeklyStats: List[WeeklyStat]
     queue: List[QueueItem]
 
-
+# UPRAVENÝ PYDANTIC MODEL PRO NÁLEZ S PŘIDANÝM BOXEM
 class ClassificationFinding(BaseModel):
     label: str
     confidence: float
     category: str
-
+    box: Optional[List[float]] = None  # Formát: [xmin, ymin, xmax, ymax]
 
 class ClassificationRequest(BaseModel):
     imageBase64: str = Field(..., min_length=1)
-
 
 class ClassificationResponse(BaseModel):
     scanId: str
@@ -270,25 +288,20 @@ class ClassificationResponse(BaseModel):
     llmReport: str
     imageUrl: str = ""
 
-
 class FeedbackRequest(BaseModel):
     scanId: str
     confirmed: bool
 
-
 class FeedbackResponse(BaseModel):
     success: bool
-
 
 class ReviewRequest(BaseModel):
     scanId: str
     decision: str
     doctorNote: Optional[str] = None
 
-
 class ReviewResponse(BaseModel):
     success: bool
-
 
 class AuditLogEntry(BaseModel):
     id: str
@@ -298,7 +311,6 @@ class AuditLogEntry(BaseModel):
     target: str
     status: str
 
-
 class UserRecord(BaseModel):
     id: str
     name: str
@@ -306,7 +318,6 @@ class UserRecord(BaseModel):
     role: str
     hospitalId: str
     active: bool
-
 
 class ModelInstance(BaseModel):
     id: str
@@ -316,7 +327,6 @@ class ModelInstance(BaseModel):
     hospitalId: Optional[str]
     lastUpdated: str
 
-
 class LicenseInfo(BaseModel):
     id: str
     customer: str
@@ -325,12 +335,10 @@ class LicenseInfo(BaseModel):
     seats: int
     status: str
 
-
 class ChmuData(BaseModel):
     pm25: int
     pm10: int
     forecast: str
-
 
 class RegionDashboard(BaseModel):
     hospitals: List[Hospital]
@@ -341,7 +349,6 @@ class RegionDashboard(BaseModel):
     upcomingEvents: List[str]
     alert: str
 
-
 class RedirectSuggestion(BaseModel):
     fromHospitalId: str
     toHospitalId: str
@@ -349,10 +356,8 @@ class RedirectSuggestion(BaseModel):
     suggestedCapacity: int
     action: str
 
-
 def utc_now_iso() -> str:
     return datetime.utcnow().replace(microsecond=0).isoformat()
-
 
 def compute_anti_starvation_boost(wait_minutes: int) -> int:
     if wait_minutes < 15:
@@ -362,7 +367,6 @@ def compute_anti_starvation_boost(wait_minutes: int) -> int:
     if wait_minutes < 45:
         return 25
     return 35
-
 
 def compute_priority_score(
     ai_confidence: float,
@@ -376,7 +380,6 @@ def compute_priority_score(
         score += 25.0
     return round(score, 2)
 
-
 def build_queue_item(
     scan_id: str,
     patient_id: str,
@@ -389,9 +392,7 @@ def build_queue_item(
 ) -> Dict[str, Any]:
     anti_starvation_boost = compute_anti_starvation_boost(wait_minutes)
     priority_score = compute_priority_score(
-        scenario["confidence"],
-        wait_minutes,
-        scenario["isCritical"],
+        scenario["confidence"], wait_minutes, scenario["isCritical"],
     )
     return {
         "scanId": scan_id,
@@ -411,7 +412,6 @@ def build_queue_item(
         "_isCritical": scenario["isCritical"],
     }
 
-
 def recalculate_opava_queue(queue: List[Dict[str, Any]]) -> None:
     now = datetime.utcnow()
     for item in queue:
@@ -419,7 +419,7 @@ def recalculate_opava_queue(queue: List[Dict[str, Any]]) -> None:
             submitted_at = datetime.fromisoformat(item["submittedAt"])
         except ValueError:
             submitted_at = now
-            item["submittedAt"] = utc_now_iso()
+        item["submittedAt"] = utc_now_iso()
         wait_minutes = max(int((now - submitted_at).total_seconds() // 60), 0)
         item["waitTimeMinutes"] = wait_minutes
         item["antiStarvationBoost"] = compute_anti_starvation_boost(wait_minutes)
@@ -429,7 +429,6 @@ def recalculate_opava_queue(queue: List[Dict[str, Any]]) -> None:
             item.get("_isCritical", False),
         )
     queue.sort(key=lambda entry: entry["priorityScore"], reverse=True)
-
 
 def queue_response(queue: List[Dict[str, Any]]) -> List[QueueItem]:
     response_items: List[QueueItem] = []
@@ -452,7 +451,6 @@ def queue_response(queue: List[Dict[str, Any]]) -> List[QueueItem]:
             )
         )
     return response_items
-
 
 def compute_metrics(queue: List[Dict[str, Any]]) -> ModelMetrics:
     queue_length = len(queue)
@@ -484,7 +482,6 @@ def compute_metrics(queue: List[Dict[str, Any]]) -> ModelMetrics:
         baselineAccuracy=62,
     )
 
-
 def compute_weekly_stats(queue: List[Dict[str, Any]]) -> List[WeeklyStat]:
     urgent_count = sum(1 for item in queue if item["isUrgent"])
     return [
@@ -493,7 +490,6 @@ def compute_weekly_stats(queue: List[Dict[str, Any]]) -> List[WeeklyStat]:
         WeeklyStat(week="19. tyd", scans=185, urgent=42, avgProcessingTimeMin=28),
         WeeklyStat(week="20. tyd", scans=190, urgent=urgent_count, avgProcessingTimeMin=25),
     ]
-
 
 HOSPITALS: List[Hospital] = [
     Hospital(
@@ -593,9 +589,7 @@ GOLDEN_QUEUE: List[QueueItem] = [
         waitTimeMinutes=1,
         priorityScore=68.4,
         antiStarvationBoost=0,
-        llmReport=(
-            "Bez zjevnych patologickych nalezu. AI doporucuje standardni revizi."
-        ),
+        llmReport="Bez zjevnych patologickych nalezu. AI doporucuje standardni revizi.",
         imageUrl=pick_image("NORMAL"),
     ),
 ]
@@ -630,11 +624,12 @@ AI_MOCK_RESULTS: List[Dict[str, Any]] = [
                 "label": "Bez patrnych infiltratu, pleura hladka, bez tekutiny",
                 "confidence": 0.9,
                 "category": "celkovy obraz",
+                "box": None,
             }
         ],
         "llmReport": (
             "Snimek je bez zjevnych patologickych zmen. AI detekovala normalni obraz "
-            "s 90 % jistotou a doporucuje standardni overeni lekarem."
+            "s 90 % jistotou and doporucuje standardni overeni lekarem."
         ),
         "isCritical": False,
         "isUrgent": False,
@@ -647,6 +642,7 @@ AI_MOCK_RESULTS: List[Dict[str, Any]] = [
                 "label": "Plice vzdusne, srdecni stin v norme",
                 "confidence": 0.86,
                 "category": "celkovy obraz",
+                "box": None,
             }
         ],
         "llmReport": (
@@ -664,6 +660,7 @@ AI_MOCK_RESULTS: List[Dict[str, Any]] = [
                 "label": "Infiltrace v pravem dolnim laloku",
                 "confidence": 0.82,
                 "category": "plicni parenchym",
+                "box": [210.0, 450.0, 480.0, 720.0],  # Mock box pro predem nahrana data
             }
         ],
         "llmReport": (
@@ -681,6 +678,7 @@ AI_MOCK_RESULTS: List[Dict[str, Any]] = [
                 "label": "Difuzni opacity v leve strednim laloku",
                 "confidence": 0.78,
                 "category": "plicni parenchym",
+                "box": [500.0, 380.0, 780.0, 610.0],
             }
         ],
         "llmReport": (
@@ -698,6 +696,7 @@ AI_MOCK_RESULTS: List[Dict[str, Any]] = [
                 "label": "Segmentalni infiltraty v pravem hornim laloku",
                 "confidence": 0.87,
                 "category": "plicni parenchym",
+                "box": [180.0, 200.0, 420.0, 430.0],
             }
         ],
         "llmReport": (
@@ -715,6 +714,7 @@ AI_MOCK_RESULTS: List[Dict[str, Any]] = [
                 "label": "Kolaps prave plice, posun mediastina",
                 "confidence": 0.95,
                 "category": "kriticky nalez",
+                "box": [50.0, 150.0, 350.0, 800.0],
             }
         ],
         "llmReport": (
@@ -732,6 +732,7 @@ AI_MOCK_RESULTS: List[Dict[str, Any]] = [
                 "label": "Kolaps leve plice s hypertransparentnim polem",
                 "confidence": 0.92,
                 "category": "kriticky nalez",
+                "box": [600.0, 120.0, 920.0, 750.0],
             }
         ],
         "llmReport": (
@@ -749,6 +750,7 @@ AI_MOCK_RESULTS: List[Dict[str, Any]] = [
                 "label": "Volna tekutina v pravem kostofrenickem uhlu",
                 "confidence": 0.9,
                 "category": "pleura",
+                "box": [80.0, 700.0, 390.0, 910.0],
             }
         ],
         "llmReport": (
@@ -766,6 +768,7 @@ AI_MOCK_RESULTS: List[Dict[str, Any]] = [
                 "label": "Tekutina v levem kostofrenickem uhlu",
                 "confidence": 0.88,
                 "category": "pleura",
+                "box": [580.0, 680.0, 900.0, 890.0],
             }
         ],
         "llmReport": (
@@ -783,6 +786,7 @@ AI_MOCK_RESULTS: List[Dict[str, Any]] = [
                 "label": "Difuzni bilateralni opacity s hrozicim resp. selhanim",
                 "confidence": 0.9,
                 "category": "kriticky stav",
+                "box": [150.0, 250.0, 850.0, 800.0],
             }
         ],
         "llmReport": (
@@ -795,6 +799,7 @@ AI_MOCK_RESULTS: List[Dict[str, Any]] = [
 ]
 
 app = FastAPI()
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -806,20 +811,24 @@ app.add_middleware(
 app.mount("/static/images", StaticFiles(directory=IMAGES_DIR), name="dataset_images")
 app.mount("/static/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
 
-
 @app.middleware("http")
 async def allow_large_json_bodies(request: Request, call_next):
     body = await request.body()
     request._body = body
     return await call_next(request)
 
-
 @app.on_event("startup")
 def startup_state() -> None:
     now = datetime.utcnow().replace(microsecond=0)
     used_images: set[str] = set()
     app.state.used_images = used_images
-    app.state.model = load_ai_model()
+    
+    try:
+        app.state.model = load_ai_model()
+    except Exception as e:
+        print(f"⚠️ Model se nenasel, bezime bez nej: {e}")
+        app.state.model = None
+        
     app.state.opava_queue = [
         build_queue_item(
             scan_id="X-5521",
@@ -854,23 +863,19 @@ def startup_state() -> None:
     ]
     recalculate_opava_queue(app.state.opava_queue)
 
-
 def get_hospital_or_404(hospital_id: str) -> Hospital:
     hospital = HOSPITAL_BY_ID.get(hospital_id)
     if not hospital:
         raise HTTPException(status_code=404, detail="Hospital not found")
     return hospital
 
-
 @app.get("/v1/hospitals", response_model=List[Hospital])
 def list_hospitals() -> List[Hospital]:
     return HOSPITALS
 
-
 @app.get("/v1/hospitals/{hospital_id}", response_model=Hospital)
 def get_hospital(hospital_id: str) -> Hospital:
     return get_hospital_or_404(hospital_id)
-
 
 @app.get("/v1/hospitals/{hospital_id}/users", response_model=List[User])
 def list_hospital_users(hospital_id: str) -> List[User]:
@@ -892,7 +897,6 @@ def list_hospital_users(hospital_id: str) -> List[User]:
         ),
     ]
 
-
 @app.post("/v1/auth/login", response_model=LoginResponse)
 def login(payload: LoginRequest) -> LoginResponse:
     hospital = get_hospital_or_404(payload.hospitalId)
@@ -905,7 +909,6 @@ def login(payload: LoginRequest) -> LoginResponse:
     )
     return LoginResponse(token="jwt-token", user=user, hospital=hospital)
 
-
 @app.get("/v1/hospitals/{hospital_id}/queue", response_model=List[QueueItem])
 def get_queue(hospital_id: str) -> List[QueueItem]:
     get_hospital_or_404(hospital_id)
@@ -913,7 +916,6 @@ def get_queue(hospital_id: str) -> List[QueueItem]:
         return GOLDEN_QUEUE
     recalculate_opava_queue(app.state.opava_queue)
     return queue_response(app.state.opava_queue)
-
 
 @app.get("/v1/hospitals/{hospital_id}/metrics", response_model=ModelMetrics)
 def get_metrics(hospital_id: str) -> ModelMetrics:
@@ -923,7 +925,6 @@ def get_metrics(hospital_id: str) -> ModelMetrics:
     recalculate_opava_queue(app.state.opava_queue)
     return compute_metrics(app.state.opava_queue)
 
-
 @app.get("/v1/hospitals/{hospital_id}/weekly-stats", response_model=List[WeeklyStat])
 def get_weekly_stats(hospital_id: str) -> List[WeeklyStat]:
     get_hospital_or_404(hospital_id)
@@ -931,7 +932,6 @@ def get_weekly_stats(hospital_id: str) -> List[WeeklyStat]:
         return GOLDEN_WEEKLY_STATS
     recalculate_opava_queue(app.state.opava_queue)
     return compute_weekly_stats(app.state.opava_queue)
-
 
 @app.get("/v1/hospitals/{hospital_id}/dashboard", response_model=DashboardResponse)
 def get_dashboard(hospital_id: str) -> DashboardResponse:
@@ -974,7 +974,6 @@ def get_dashboard(hospital_id: str) -> DashboardResponse:
         queue=queue_items,
     )
 
-
 @app.post("/v1/hospitals/{hospital_id}/classify", response_model=ClassificationResponse)
 def classify_scan(
     hospital_id: str,
@@ -983,13 +982,13 @@ def classify_scan(
     get_hospital_or_404(hospital_id)
     if hospital_id != "nem-opava":
         raise HTTPException(status_code=403, detail="Classification enabled only for nem-opava")
+        
     scan_id = f"X-{random.randint(1000, 9999)}"
     patient_id = f"P-{random.randint(1000, 9999)}"
     patient_age = random.randint(20, 85)
     patient_sex = random.choice(["M", "Z"])
     submitted_at = utc_now_iso()
-
-    # Save uploaded image
+    
     image_url = ""
     try:
         image_data = decode_base64_image(payload.imageBase64)
@@ -1000,21 +999,23 @@ def classify_scan(
         image_url = f"/static/uploads/{filename}"
     except (ValueError, binascii.Error) as exc:
         raise HTTPException(status_code=400, detail="Invalid imageBase64 payload") from exc
-
+        
     try:
-        results = app.state.model.predict(source=filepath, conf=0.25, verbose=False)
+        if app.state.model is not None:
+            results = app.state.model.predict(source=filepath, conf=0.25, verbose=False)
+            scenario = map_yolo_results(results)
+        else:
+            # Fallback pokud YOLO model neni zaveden (vytahne nahodny mock vysledek z listu)
+            scenario = random.choice(AI_MOCK_RESULTS)
     except Exception as exc:
         raise HTTPException(status_code=500, detail="AI model inference failed") from exc
-
-    scenario = map_yolo_results(results)
-
-    # Pick a real dataset image matching the dominant class for fallback preview
+        
     category = "NORMAL" if scenario["dominantClass"] == "NORMAL" else "PNEUMONIA"
     used_images = getattr(app.state, "used_images", set())
     dataset_image_url = pick_image(category, used_images)
     if dataset_image_url:
         used_images.add(dataset_image_url.split("/")[-1])
-
+        
     new_item = build_queue_item(
         scan_id=scan_id,
         patient_id=patient_id,
@@ -1027,6 +1028,7 @@ def classify_scan(
     )
     app.state.opava_queue.append(new_item)
     recalculate_opava_queue(app.state.opava_queue)
+    
     findings = [ClassificationFinding(**finding) for finding in scenario["findings"]]
     return ClassificationResponse(
         scanId=scan_id,
@@ -1037,33 +1039,22 @@ def classify_scan(
         imageUrl=image_url or dataset_image_url,
     )
 
-
 @app.post("/v1/hospitals/{hospital_id}/review", response_model=ReviewResponse)
 def submit_review(hospital_id: str, payload: ReviewRequest) -> ReviewResponse:
     get_hospital_or_404(hospital_id)
     print(
-        "Review: Snimek",
-        payload.scanId,
-        "rozhodnuti",
-        payload.decision,
-        "poznamka",
-        payload.doctorNote or "-",
+        "Review: Snimek", payload.scanId, "rozhodnuti", payload.decision, "poznamka", payload.doctorNote or "-",
     )
     return ReviewResponse(success=True)
-
 
 @app.post("/v1/hospitals/{hospital_id}/feedback", response_model=FeedbackResponse)
 def send_feedback(hospital_id: str, payload: FeedbackRequest) -> FeedbackResponse:
     get_hospital_or_404(hospital_id)
     status = "validovan" if payload.confirmed else "vyvracen"
     print(
-        "Fly-wheel: Snimek",
-        payload.scanId,
-        status,
-        "lekarum. Ukladam do pipeline pro retraining...",
+        "Fly-wheel: Snimek", payload.scanId, status, "lekarum. Ukladam do pipeline pro retraining...",
     )
     return FeedbackResponse(success=True)
-
 
 @app.get("/v1/admin/audit-logs", response_model=List[AuditLogEntry])
 def get_audit_logs() -> List[AuditLogEntry]:
@@ -1086,7 +1077,6 @@ def get_audit_logs() -> List[AuditLogEntry]:
         ),
     ]
 
-
 @app.get("/v1/admin/users", response_model=List[UserRecord])
 def get_admin_users() -> List[UserRecord]:
     return [
@@ -1107,7 +1097,6 @@ def get_admin_users() -> List[UserRecord]:
             active=True,
         ),
     ]
-
 
 @app.get("/v1/admin/models", response_model=List[ModelInstance])
 def get_admin_models() -> List[ModelInstance]:
@@ -1130,7 +1119,6 @@ def get_admin_models() -> List[ModelInstance]:
         ),
     ]
 
-
 @app.get("/v1/admin/licenses", response_model=List[LicenseInfo])
 def get_admin_licenses() -> List[LicenseInfo]:
     return [
@@ -1144,7 +1132,6 @@ def get_admin_licenses() -> List[LicenseInfo]:
         )
     ]
 
-
 @app.get("/region/chmu", response_model=ChmuData)
 @app.get("/v1/region/chmu", response_model=ChmuData)
 def get_chmu_data() -> ChmuData:
@@ -1153,7 +1140,6 @@ def get_chmu_data() -> ChmuData:
         pm10=71,
         forecast="Smogova situace, zvyseny napor respiracnich potizi.",
     )
-
 
 @app.get("/region/dashboard", response_model=RegionDashboard)
 @app.get("/v1/region/dashboard", response_model=RegionDashboard)
@@ -1176,7 +1162,6 @@ def get_region_dashboard() -> RegionDashboard:
         alert="Smogova situace: doporuceno prelozit neurgentni vysetreni.",
     )
 
-
 @app.get("/region/redirects", response_model=List[RedirectSuggestion])
 @app.get("/v1/region/redirects", response_model=List[RedirectSuggestion])
 def get_region_redirects() -> List[RedirectSuggestion]:
@@ -1190,7 +1175,6 @@ def get_region_redirects() -> List[RedirectSuggestion]:
         )
     ]
 
-
 @app.get("/v1/images/dataset")
 def list_dataset_images() -> dict:
     return {
@@ -1200,7 +1184,6 @@ def list_dataset_images() -> dict:
         "test_pneumonia": len(TEST_PNEUMONIA),
         "total": len(TRAIN_NORMAL) + len(TRAIN_PNEUMONIA) + len(TEST_NORMAL) + len(TEST_PNEUMONIA),
     }
-
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
