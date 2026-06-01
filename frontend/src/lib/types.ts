@@ -42,6 +42,7 @@ export interface QueueItem {
   antiStarvationBoost: number;
   llmReport: string;
   imageUrl?: string;
+  markerPosition?: { x: number; y: number };
   classification?: "NÁLEZ" | "NORMÁLNÍ";
   findings?: Finding[];
   honeypot?: boolean;
@@ -61,6 +62,7 @@ export interface ClassifyResponse {
   confidence: number;
   findings: Finding[];
   llmReport: string;
+  markerPosition?: { x: number; y: number };
 }
 
 export interface ModelMetrics {

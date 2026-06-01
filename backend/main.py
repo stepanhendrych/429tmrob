@@ -9,7 +9,10 @@ from fastapi import Body, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
-from dotenv import load_dotenv
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    load_dotenv = None
 try:
     from ultralytics import YOLO
     _HAS_YOLO = True
@@ -18,7 +21,8 @@ except ImportError:
     _HAS_YOLO = False
 import uvicorn
 
-load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
+if load_dotenv:
+    load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 try:
     from groq import Groq
@@ -286,6 +290,7 @@ class QueueItem(BaseModel):
     antiStarvationBoost: int
     llmReport: str
     imageUrl: str = ""
+    markerPosition: Optional[MarkedPoint] = None
 
 class ModelMetrics(BaseModel):
     sensitivity: float
@@ -336,6 +341,7 @@ class ClassificationResponse(BaseModel):
     findings: List[ClassificationFinding]
     llmReport: str
     imageUrl: str = ""
+    markerPosition: Optional[MarkedPoint] = None
 
 class FeedbackRequest(BaseModel):
     scanId: str
@@ -434,6 +440,15 @@ def compute_priority_score(
         score += 25.0
     return round(score, 2)
 
+def compute_marker_from_findings(findings: List[Dict[str, Any]]) -> Optional[Dict[str, float]]:
+    for f in findings:
+        box = f.get("box")
+        if box and len(box) == 4:
+            cx = (box[0] + box[2]) / 2.0 / 10.0
+            cy = (box[1] + box[3]) / 2.0 / 10.0
+            return {"x": round(cx, 1), "y": round(cy, 1)}
+    return None
+
 def build_queue_item(
     scan_id: str,
     patient_id: str,
@@ -448,6 +463,7 @@ def build_queue_item(
     priority_score = compute_priority_score(
         scenario["confidence"], wait_minutes, scenario["isCritical"],
     )
+    marker = compute_marker_from_findings(scenario.get("findings", []))
     return {
         "scanId": scan_id,
         "patientId": patient_id,
@@ -462,6 +478,7 @@ def build_queue_item(
         "antiStarvationBoost": anti_starvation_boost,
         "llmReport": scenario["llmReport"],
         "imageUrl": image_url,
+        "markerPosition": marker,
         "_aiConfidence": scenario["confidence"],
         "_isCritical": scenario["isCritical"],
     }
@@ -487,6 +504,8 @@ def recalculate_opava_queue(queue: List[Dict[str, Any]]) -> None:
 def queue_response(queue: List[Dict[str, Any]]) -> List[QueueItem]:
     response_items: List[QueueItem] = []
     for item in queue:
+        mp = item.get("markerPosition")
+        marker = MarkedPoint(x=mp["x"], y=mp["y"]) if mp else None
         response_items.append(
             QueueItem(
                 scanId=item["scanId"],
@@ -502,6 +521,7 @@ def queue_response(queue: List[Dict[str, Any]]) -> List[QueueItem]:
                 antiStarvationBoost=item["antiStarvationBoost"],
                 llmReport=item["llmReport"],
                 imageUrl=item.get("imageUrl", ""),
+                markerPosition=marker,
             )
         )
     return response_items
@@ -1142,6 +1162,7 @@ def classify_scan(
     recalculate_opava_queue(app.state.opava_queue)
     
     findings = [ClassificationFinding(**finding) for finding in scenario["findings"]]
+    marker = new_item.get("markerPosition")
     return ClassificationResponse(
         scanId=scan_id,
         classification=scenario["classification"],
@@ -1149,6 +1170,7 @@ def classify_scan(
         findings=findings,
         llmReport=scenario["llmReport"],
         imageUrl=image_url or dataset_image_url,
+        markerPosition=MarkedPoint(x=marker["x"], y=marker["y"]) if marker else None,
     )
 
 @app.post("/v1/hospitals/{hospital_id}/review", response_model=ReviewResponse)
