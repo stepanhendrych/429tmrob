@@ -2,39 +2,79 @@
 *.log
 dist/
 build/
+.vscode/
+.idea/
 .vscode/mcp.json
 
-# Python
+# Python artifacts
 *.py[cod]
+*$py.class
 *.pyo
 *.pyd
+*.pyc
 __pycache__/
 .pytest_cache/
 .mypy_cache/
+.python-version
+
+# Virtual environments
+.env
+.venv/
+env/
+venv/
+ENV/
+
+# Distribution / packaging
 pip-wheel-metadata/
 *.egg-info/
 .eggs/
-.cache/
-.coverage
-coverage.xml
-htmlcov/
+build/
+dist/
+
+# Logs and local files
+*.sqlite3
+*.db
+*.db-journal
+
+# macOS
+.DS_Store
 
 # Node
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+package-lock.json
+pnpm-lock.yaml
 
 # IDEs
-.idea/
 *.iml
 
 # OS files
-.DS_Store
 Thumbs.db
 desktop.ini
 
 # Misc
 *.pem
 *.env.*
-!.env
+
+# Coverage
+htmlcov/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+
+# Editor temporary files
+*.swp
+*.swo
+*.tmp
+*.temp
+*.bak
+*~
+
+# Nested repository
+429tmrob/
