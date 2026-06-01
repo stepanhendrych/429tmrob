@@ -1,4 +1,4 @@
-import { CheckCircle2, ClipboardList } from "lucide-react";
+import { CheckCircle2, ClipboardList, HelpCircle, XCircle } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { EthicsSummary } from "@/components/dashboard/ethics-summary";
@@ -171,7 +171,15 @@ export function DoctorDashboard({ hospitalId }: Props) {
                             key={s.scanId}
                             className="flex items-center gap-2 rounded-md bg-muted/50 px-2.5 py-2 text-xs"
                           >
-                            <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                            {s.doctorDecision === "agreed" ? (
+                              <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                            ) : s.doctorDecision === "different" ? (
+                              <HelpCircle className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+                            ) : s.doctorDecision === "healthy" ? (
+                              <XCircle className="h-3.5 w-3.5 shrink-0 text-red-500" />
+                            ) : (
+                              <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                            )}
                             <span className="font-mono font-medium">{s.scanId}</span>
                             <span className="text-muted-foreground">·</span>
                             <span className="text-muted-foreground">{s.patientId}</span>

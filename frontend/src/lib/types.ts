@@ -41,10 +41,12 @@ export interface QueueItem {
   priorityScore: number;
   antiStarvationBoost: number;
   llmReport: string;
+  imageUrl?: string;
   classification?: "NÁLEZ" | "NORMÁLNÍ";
   findings?: Finding[];
   honeypot?: boolean;
   correctAnswer?: DoctorDecision;
+  doctorDecision?: DoctorDecision;
 }
 
 export interface Finding {

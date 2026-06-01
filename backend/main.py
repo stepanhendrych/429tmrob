@@ -874,7 +874,7 @@ def startup_state() -> None:
     except Exception as e:
         print(f"⚠️ Model se nenasel, bezime bez nej: {e}")
         app.state.model = None
-        
+
     normal_scenarios = [AI_MOCK_RESULTS[0], AI_MOCK_RESULTS[1]]
     pneumonia_scenarios = AI_MOCK_RESULTS[2:]
     app.state.opava_queue = []

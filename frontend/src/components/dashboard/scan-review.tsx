@@ -138,8 +138,8 @@ export function ScanReview({ scan, onBack, onSubmit, hospitalId }: Props) {
           "error",
         );
       } else {
-        addToast("Hodnocení odesláno — děkujeme za zpětnou vazbu.", "success");
-        onSubmit?.(scan);
+        addToast("Hodnocení odesláno", "success", undefined, 1000);
+        onSubmit?.({ ...scan, doctorDecision: decision });
       }
     }
   };
@@ -300,7 +300,10 @@ export function ScanReview({ scan, onBack, onSubmit, hospitalId }: Props) {
           {/* Demo X-ray image */}
           <div className="rounded-lg overflow-hidden border bg-black">
             <img
-              src={`/images/xray-${(parseInt(scan.scanId.replace(/\D/g, ""), 10) % 2) + 1}.webp`}
+              src={
+                scan.imageUrl ||
+                `/images/xray-${(parseInt(scan.scanId.replace(/\D/g, ""), 10) % 2) + 1}.webp`
+              }
               alt={`RTG snímek ${scan.scanId}`}
               className="w-full h-auto max-h-[400px] object-contain mx-auto"
             />
