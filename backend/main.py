@@ -831,38 +831,42 @@ def startup_state() -> None:
     except Exception as e:
         print(f"⚠️ Model se nenasel, bezime bez nej: {e}")
         app.state.model = None
-    app.state.opava_queue = [
-        build_queue_item(
-            scan_id="X-5521",
-            patient_id="P-9921",
-            patient_age=61,
-            patient_sex="M",
-            submitted_at=(now - timedelta(minutes=22)).isoformat(),
-            wait_minutes=22,
-            scenario=AI_MOCK_RESULTS[2],
-            image_url=pick_image("PNEUMONIA", used_images),
-        ),
-        build_queue_item(
-            scan_id="X-5522",
-            patient_id="P-1182",
-            patient_age=47,
-            patient_sex="Z",
-            submitted_at=(now - timedelta(minutes=8)).isoformat(),
-            wait_minutes=8,
-            scenario=AI_MOCK_RESULTS[0],
-            image_url=pick_image("NORMAL", used_images),
-        ),
-        build_queue_item(
-            scan_id="X-5523",
-            patient_id="P-4521",
-            patient_age=73,
-            patient_sex="M",
-            submitted_at=(now - timedelta(minutes=35)).isoformat(),
-            wait_minutes=35,
-            scenario=AI_MOCK_RESULTS[5],
-            image_url=pick_image("PNEUMONIA", used_images),
-        ),
-    ]
+    normal_scenarios = [AI_MOCK_RESULTS[0], AI_MOCK_RESULTS[1]]
+    pneumonia_scenarios = AI_MOCK_RESULTS[2:]
+    app.state.opava_queue = []
+    counter = 0
+    for img in ALL_NORMAL:
+        sub = "train" if img in TRAIN_NORMAL else "test"
+        scenario = normal_scenarios[counter % len(normal_scenarios)]
+        app.state.opava_queue.append(
+            build_queue_item(
+                scan_id=f"X-{5521 + counter}",
+                patient_id=f"P-{1000 + counter}",
+                patient_age=random.randint(20, 85),
+                patient_sex=random.choice(["M", "Z"]),
+                submitted_at=(now - timedelta(minutes=random.randint(0, 120))).isoformat(),
+                wait_minutes=random.randint(0, 120),
+                scenario=scenario,
+                image_url=f"/static/images/{sub}/NORMAL/{img}",
+            )
+        )
+        counter += 1
+    for img in ALL_PNEUMONIA:
+        sub = "train" if img in TRAIN_PNEUMONIA else "test"
+        scenario = pneumonia_scenarios[counter % len(pneumonia_scenarios)]
+        app.state.opava_queue.append(
+            build_queue_item(
+                scan_id=f"X-{5521 + counter}",
+                patient_id=f"P-{2000 + counter}",
+                patient_age=random.randint(20, 85),
+                patient_sex=random.choice(["M", "Z"]),
+                submitted_at=(now - timedelta(minutes=random.randint(0, 120))).isoformat(),
+                wait_minutes=random.randint(0, 120),
+                scenario=scenario,
+                image_url=f"/static/images/{sub}/PNEUMONIA/{img}",
+            )
+        )
+        counter += 1
     recalculate_opava_queue(app.state.opava_queue)
 
 

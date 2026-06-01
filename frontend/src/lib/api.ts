@@ -52,6 +52,9 @@ export async function getHospitals(): Promise<Hospital[]> {
 }
 
 export async function getHospital(id: string): Promise<Hospital> {
+  if (isOpava(id)) {
+    return apiFetch(`/hospitals/${id}`);
+  }
   const h = GOLDEN_HOSPITALS.find((h) => h.id === id);
   if (!h)
     throw new ApiError(`Nemocnice s ID "${id}" nebyla nalezena.`, 404, {
